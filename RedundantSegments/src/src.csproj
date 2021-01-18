@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <Compile Include="Interop.Errors.cs" />
+    <Compile Include="MyPath.cs" />
+    <Compile Include="MyPathHelper.cs" />
+    <Compile Include="MyPathInternal.cs" />
+    <Compile Include="RedundantSegmentHelper.cs" />
+    <Compile Include="RedundantSegmentHelper.Unix.cs" Condition="'$(OS)' == 'Unix'" />
+    <Compile Include="RedundantSegmentHelper.Windows.cs" Condition="'$(OS)' == 'Windows_NT'" />
+    <Compile Include="ValueStringBuilder.cs" />
+  </ItemGroup>
+  
+</Project>

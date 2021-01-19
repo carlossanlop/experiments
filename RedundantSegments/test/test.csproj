@@ -18,7 +18,7 @@
     <Compile Include="PathFeatures.cs" Condition="'$(OS)' == 'Windows_NT'" />
     <Compile Include="PathTestsBase.cs" />
     <Compile Include="PathTestsBase.Windows.cs" Condition="'$(OS)' == 'Windows_NT'" />
-    <Compile Include="PathTests.cs" />
+    <Compile Include="PathTests.cs"  Condition="'$(OS)' == 'Windows_NT'" />
     <Compile Include="RedundantSegmentsTestBase.cs" />
     <Compile Include="RedundantSegmentsTests.Unix.cs" Condition="'$(OS)' == 'Unix'" />
     <Compile Include="RedundantSegmentsTests.Windows.cs" Condition="'$(OS)' == 'Windows_NT'" />

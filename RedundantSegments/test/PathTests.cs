@@ -54,9 +54,7 @@ namespace test
             { @"\\.\\somedir\..", @"C:\git\runtime", @"\\.\" },
             { @"\\.\",            @"C:\git\runtime", @"\\.\" },
             { @"\\.\..\..\..\..", @"C:\git\runtime", @"\\.\" },
-            { @"\\.\",            @"C:\git\runtime", @"\\.\" },
             { @"\\.\C:\Foo." ,    @"C:\git\runtime", @"\\.\C:\Foo" },
-            { @"\\.\C:\Foo " ,    @"C:\git\runtime", @"\\.\C:\Foo" },
         };
 
         [Theory,
@@ -187,12 +185,10 @@ namespace test
             { @"C:",        @"",            @"C:\"},
 
             // Relative segments eating into the root
-            { @"foo",               @"GLOBALROOT\", @"GLOBALROOT\foo" },
             { @"..\..\foo\..\..\",  @"",            @"..\" },
             { @".\..\..\..\..\foo", @"",            @".\foo" },
             { @"..\foo\..\..\..\",  @"",            @"..\" },
             { @"\.\.\..\",          @"C:\",         @"C:\"},
-            { @"..\..\..\foo",      @"GLOBALROOT\", @"GLOBALROOT\foo" },
             { @"foo\..\..\",        @"",            @"foo\" },
             { @".\.\foo\..\",       @"",            @".\" },
         };
@@ -233,7 +229,6 @@ namespace test
             { @"C:",        @"",            @"C:\"},
 
             // Relative segments eating into the root
-            { @"foo",               @"GLOBALROOT\", @"GLOBALROOT\foo" },
             { @"..\..\foo\..\..\",  @"",            @"..\..\foo\..\..\" },
             { @".\..\..\..\..\foo", @"",            @".\..\..\..\..\foo" },
             { @"..\foo\..\..\..\",  @"",            @"..\foo\..\..\..\" },
@@ -260,7 +255,6 @@ namespace test
             { @"\.\bar",      @"C:\git\runtime", @"C:\bar" },
             { @"\tmp\..",     @"C:\git\runtime", @"C:\" },
             { @"\tmp\bar\..", @"C:\git\runtime", @"C:\tmp" },
-            { @"\tmp\bar\..", @"C:\git\runtime", @"C:\tmp" },
             { @"\",           @"C:\git\runtime", @"C:\" },
 
             { @"..\..\tmp\bar",       @"C:\git\runtime", @"C:\tmp\bar" },
@@ -273,14 +267,12 @@ namespace test
             // Specific drive rooted
             { @"C:tmp\foo\..", @"C:\git\runtime", @"C:\git\runtime\tmp" },
             { @"C:tmp\foo\.",  @"C:\git\runtime", @"C:\git\runtime\tmp\foo" },
-            { @"C:tmp\foo\..", @"C:\git\runtime", @"C:\git\runtime\tmp" },
             { @"C:tmp", @"C:\git\runtime", @"C:\git\runtime\tmp" },
             { @"C:",    @"C:\git\runtime", @"C:\git\runtime" },
             { @"C",     @"C:\git\runtime", @"C:\git\runtime\C" },
 
             { @"Z:tmp\foo\..", @"C:\git\runtime", @"Z:\tmp" },
             { @"Z:tmp\foo\.",  @"C:\git\runtime", @"Z:\tmp\foo" },
-            { @"Z:tmp\foo\..", @"C:\git\runtime", @"Z:\tmp" },
             { @"Z:tmp", @"C:\git\runtime", @"Z:\tmp" },
             { @"Z:",    @"C:\git\runtime", @"Z:\" },
             { @"Z",     @"C:\git\runtime", @"C:\git\runtime\Z" },
@@ -290,27 +282,16 @@ namespace test
             { @"C:tmp\..\..\foo\.",     @"C:\git\runtime", @"C:\git\foo" },
             { @"C:..\..\tmp\foo\..",    @"C:\git\runtime", @"C:\tmp" },
             { @"C:tmp\..\", @"C:\git\runtime", @"C:\git\runtime\" },
-            { @"C:",        @"C:\git\runtime", @"C:\git\runtime" },
-            { @"C",         @"C:\git\runtime", @"C:\git\runtime\C" },
 
             { @"C:tmp\..\..\..\..\foo\..", @"C:\git\runtime", @"C:\" },
             { @"C:tmp\..\..\foo\.",        @"C:\",            @"C:\foo" },
             { @"C:..\..\tmp\..\foo\..",    @"C:\",            @"C:\" },
             { @"C:tmp\..\",                @"C:\",            @"C:\" },
 
-            { @"Z:tmp\foo\..", @"C:\git\runtime", @"Z:\tmp" },
-            { @"Z:tmp\foo\.",  @"C:\git\runtime", @"Z:\tmp\foo" },
-            { @"Z:tmp\foo\..", @"C:\git\runtime", @"Z:\tmp" },
-            { @"Z:tmp",        @"C:\git\runtime", @"Z:\tmp" },
-            { @"Z:",           @"C:\git\runtime", @"Z:\" },
-            { @"Z",            @"C:\git\runtime", @"C:\git\runtime\Z" },
-
             { @"Z:..\..\..\tmp\foo\..", @"C:\git\runtime", @"Z:\tmp" },
             { @"Z:tmp\..\..\foo\.",     @"C:\git\runtime", @"Z:\foo" },
             { @"Z:..\..\tmp\foo\..",    @"C:\git\runtime", @"Z:\tmp" },
             { @"Z:tmp\..\",             @"C:\git\runtime", @"Z:\" },
-            { @"Z:",     @"C:\git\runtime", @"Z:\" },
-            { @"Z",      @"C:\git\runtime", @"C:\git\runtime\Z" },
 
             { @"Z:tmp\..\..\..\..\foo\..", @"C:\git\runtime", @"Z:\" },
             { @"Z:tmp\..\..\foo\.",        @"C:\",            @"Z:\foo" },
@@ -335,7 +316,6 @@ namespace test
             { @"\.\bar",      @"C:\git\runtime", @"C:\.\bar" },
             { @"\tmp\..",     @"C:\git\runtime", @"C:\tmp\.." },
             { @"\tmp\bar\..", @"C:\git\runtime", @"C:\tmp\bar\.." },
-            { @"\tmp\bar\..", @"C:\git\runtime", @"C:\tmp\bar\.." },
             { @"\",           @"C:\git\runtime", @"C:\" },
 
             { @"..\..\tmp\bar",       @"C:\git\runtime", @"C:\git\runtime\..\..\tmp\bar" },
@@ -348,14 +328,12 @@ namespace test
             // Specific drive rooted
             { @"C:tmp\foo\..",  @"C:\git\runtime", @"C:\git\runtime\tmp\foo\.." },
             { @"C:tmp\foo\.",   @"C:\git\runtime", @"C:\git\runtime\tmp\foo\." },
-            { @"C:tmp\foo\..",  @"C:\git\runtime", @"C:\git\runtime\tmp\foo\.." },
             { @"C:tmp",         @"C:\git\runtime", @"C:\git\runtime\tmp" },
             { @"C:",            @"C:\git\runtime", @"C:\git\runtime" },
             { @"C",             @"C:\git\runtime", @"C:\git\runtime\C" },
 
             { @"Z:tmp\foo\..",  @"C:\git\runtime", @"Z:\tmp\foo\.." },
             { @"Z:tmp\foo\.",   @"C:\git\runtime", @"Z:\tmp\foo\." },
-            { @"Z:tmp\foo\..",  @"C:\git\runtime", @"Z:\tmp\foo\.." },
             { @"Z:tmp",         @"C:\git\runtime", @"Z:\tmp" },
             { @"Z:",            @"C:\git\runtime", @"Z:\" },
             { @"Z",             @"C:\git\runtime", @"C:\git\runtime\Z" },
@@ -365,27 +343,16 @@ namespace test
             { @"C:tmp\..\..\foo\.",     @"C:\git\runtime", @"C:\git\runtime\tmp\..\..\foo\." },
             { @"C:..\..\tmp\foo\..",    @"C:\git\runtime", @"C:\git\runtime\..\..\tmp\foo\.." },
             { @"C:tmp\..\",             @"C:\git\runtime", @"C:\git\runtime\tmp\..\" },
-            { @"C:",                    @"C:\git\runtime", @"C:\git\runtime" },
-            { @"C",                     @"C:\git\runtime", @"C:\git\runtime\C" },
 
             { @"C:tmp\..\..\..\..\foo\..", @"C:\git\runtime", @"C:\git\runtime\tmp\..\..\..\..\foo\.." },
             { @"C:tmp\..\..\foo\.",        @"C:\",            @"C:\tmp\..\..\foo\." },
             { @"C:..\..\tmp\..\foo\..",    @"C:\",            @"C:\..\..\tmp\..\foo\.." },
             { @"C:tmp\..\",                @"C:\",            @"C:\tmp\..\" },
 
-            { @"Z:tmp\foo\..", @"C:\git\runtime", @"Z:\tmp\foo\.." },
-            { @"Z:tmp\foo\.",  @"C:\git\runtime", @"Z:\tmp\foo\." },
-            { @"Z:tmp\foo\..", @"C:\git\runtime", @"Z:\tmp\foo\.." },
-            { @"Z:tmp",        @"C:\git\runtime", @"Z:\tmp" },
-            { @"Z:",           @"C:\git\runtime", @"Z:\" },
-            { @"Z",            @"C:\git\runtime", @"C:\git\runtime\Z" },
-
             { @"Z:..\..\..\tmp\foo\..", @"C:\git\runtime", @"Z:\..\..\..\tmp\foo\.." },
             { @"Z:tmp\..\..\foo\.",     @"C:\git\runtime", @"Z:\tmp\..\..\foo\." },
             { @"Z:..\..\tmp\foo\..",    @"C:\git\runtime", @"Z:\..\..\tmp\foo\.." },
             { @"Z:tmp\..\",             @"C:\git\runtime", @"Z:\tmp\..\" },
-            { @"Z:",                    @"C:\git\runtime", @"Z:\" },
-            { @"Z",                     @"C:\git\runtime", @"C:\git\runtime\Z" },
 
             { @"Z:tmp\..\..\..\..\foo\..",  @"C:\git\runtime", @"Z:\tmp\..\..\..\..\foo\.." },
             { @"Z:tmp\..\..\foo\.",         @"C:\",            @"Z:\tmp\..\..\foo\." },

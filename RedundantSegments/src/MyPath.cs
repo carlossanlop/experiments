@@ -168,6 +168,11 @@ namespace RedundantSegments
             return JoinInternal(first.AsSpan(), second.AsSpan(), third.AsSpan());
         }
 
+        public static bool EndsInDirectorySeparator(ReadOnlySpan<char> path) => PathInternal.EndsInDirectorySeparator(path);
+
+        public static bool EndsInDirectorySeparator(string path) => PathInternal.EndsInDirectorySeparator(path);
+
+
         public static bool IsPathFullyQualified(string path)
         {
             if (path == null)

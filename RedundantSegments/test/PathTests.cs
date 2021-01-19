@@ -2,7 +2,6 @@
 #nullable enable
 using System;
 using PathInternal = RedundantSegments.MyPathInternal;
-using PathHelper = RedundantSegments.MyPathHelper;
 using Path = RedundantSegments.MyPath;
 using ValueStringBuilder = RedundantSegments.ValueStringBuilder;
 using System.Diagnostics;

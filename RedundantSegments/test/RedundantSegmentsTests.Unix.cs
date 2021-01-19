@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using PathInternal = RedundantSegments.MyPathInternal;
-using PathHelper = RedundantSegments.MyPathHelper;
 using Path = RedundantSegments.MyPath;
 using ValueStringBuilder = RedundantSegments.ValueStringBuilder;
 using Xunit;

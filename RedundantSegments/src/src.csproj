@@ -1,9 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Library</OutputType>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <StartupObject>RedundantSegments.MainClass</StartupObject>
+    <RootNamespace>RedundantSegments</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -28,6 +30,7 @@
     <Compile Include="RedundantSegmentHelper.Unix.cs" Condition="'$(OS)' == 'Unix'" />
     <Compile Include="RedundantSegmentHelper.Windows.cs" Condition="'$(OS)' == 'Windows_NT'" />
     <Compile Include="ValueStringBuilder.cs" />
+    <Compile Include="MainClass.cs" />
   </ItemGroup>
   
 </Project>

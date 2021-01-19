@@ -15,10 +15,15 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <Compile Include="Interop.Errors.cs" />
+    <Compile Include="Interop.Windows.cs" Condition="'$(OS)' == 'Windows_NT'" />
+    <Compile Include="Interop.Unix.cs" Condition="'$(OS)' == 'Unix'" />
     <Compile Include="MyPath.cs" />
-    <Compile Include="MyPathHelper.cs" />
+    <Compile Include="MyPath.Unix.cs" Condition="'$(OS)' == 'Unix'" />
+    <Compile Include="MyPath.Windows.cs" Condition="'$(OS)' == 'Windows_NT'" />
+    <Compile Include="MyPathHelper.Windows.cs" Condition="'$(OS)' == 'Windows_NT'" />
     <Compile Include="MyPathInternal.cs" />
+    <Compile Include="MyPathInternal.Unix.cs" Condition="'$(OS)' == 'Unix'" />
+    <Compile Include="MyPathInternal.Windows.cs" Condition="'$(OS)' == 'Windows_NT'" />
     <Compile Include="RedundantSegmentHelper.cs" />
     <Compile Include="RedundantSegmentHelper.Unix.cs" Condition="'$(OS)' == 'Unix'" />
     <Compile Include="RedundantSegmentHelper.Windows.cs" Condition="'$(OS)' == 'Windows_NT'" />

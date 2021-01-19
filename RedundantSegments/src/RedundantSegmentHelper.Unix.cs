@@ -3,7 +3,6 @@ using System;
 using System.Diagnostics;
 using System.Text;
 using PathInternal = RedundantSegments.MyPathInternal;
-using PathHelper = RedundantSegments.MyPathHelper;
 using Path = RedundantSegments.MyPath;
 using ValueStringBuilder = RedundantSegments.ValueStringBuilder;
 

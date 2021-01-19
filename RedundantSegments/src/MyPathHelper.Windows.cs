@@ -3,12 +3,20 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Path = RedundantSegments.MyPath;
 using PathInternal = RedundantSegments.MyPathInternal;
 
 namespace RedundantSegments
 {
     public static class MyPathHelper
     {
+        public static bool IsPathRooted(ReadOnlySpan<char> path)
+        {
+            int length = path.Length;
+            return (length >= 1 && PathInternal.IsDirectorySeparator(path[0]))
+                || (length >= 2 && PathInternal.IsValidDriveChar(path[0]) && path[1] == PathInternal.VolumeSeparatorChar);
+        }
+
         public static void GetFullPathName(ReadOnlySpan<char> path, ref ValueStringBuilder builder)
         {
             // If the string starts with an extended prefix we would need to remove it from the path before we call GetFullPathName as

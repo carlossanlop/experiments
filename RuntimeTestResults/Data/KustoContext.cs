@@ -35,16 +35,59 @@ namespace RuntimeTestResults.Data
             }
         }
 
-        public IEnumerable<Job> GetJobs(DateTime from, DateTime to)
+        public KustoContext()
         {
-            string query = string.Format(Job.Query, from, to);
+            _builder = new KustoConnectionStringBuilder(Cluster, Database).WithAadUserPromptAuthentication();
+            _provider = KustoClientFactory.CreateCslQueryProvider(_builder);
+        }
+
+        public void Dispose()
+        {
+            _provider.Dispose();
+            GC.SuppressFinalize(this);
+        }
+
+        public IEnumerable<TestResult> GetTestResults(Job job)
+        {
+            string query = string.Format(TestResult.Query, job.JobId);
+            using IDataReader r = ExecuteQuery(query);
+
+            var testResults = new List<TestResult>();
+            while (r.Read())
+            {
+                int i = 0;
+                var tr = new TestResult();
+
+                tr.Arguments = r.GetString(i++);
+                tr.Attempt = r.GetString(i++);
+                tr.Duration = r.GetDouble(i++);
+                tr.Exception = r.GetString(i++);
+                tr.JobId = r.GetInt64(i++);
+                tr.JobName = r.GetString(i++);
+                tr.Message = r.GetString(i++);
+                tr.Method = r.GetString(i++);
+                tr.Reason = r.GetString(i++);
+                tr.Result = r.GetString(i++);
+                tr.StackTrace = r.GetString(i++);
+                tr.Traits = r.GetString(i++);
+                tr.Type = r.GetString(i++);
+                tr.WorkItemFriendlyName = r.GetString(i++);
+                tr.WorkItemName = r.GetString(i++);
+
+                testResults.Add(tr);
+            }
+            return testResults;
+        }
+
+        public IEnumerable<Job> GetJobs(Repository repository, DateTime from, DateTime to)
+        {
+            string query = string.Format(Job.Query, repository.Name, from, to);
             using IDataReader r = ExecuteQuery(query);
 
             var jobs = new List<Job>();
             while (r.Read())
             {
                 int i = 0;
-
                 var j = new Job();
 
                 j.Attempt = r.GetString(i++);
@@ -76,18 +119,6 @@ namespace RuntimeTestResults.Data
                 jobs.Add(j);
             }
             return jobs;
-        }
-
-        public KustoContext()
-        {
-            _builder = new KustoConnectionStringBuilder(Cluster, Database).WithAadUserPromptAuthentication();
-            _provider = KustoClientFactory.CreateCslQueryProvider(_builder);
-        }
-
-        public void Dispose()
-        {
-            _provider.Dispose();
-            GC.SuppressFinalize(this);
         }
 
         /// <summary>

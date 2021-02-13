@@ -1,15 +1,30 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Home";
 }
 
 <div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+
+    <!-- Repositories dropdown -->
+    <div class="dropdown show">
+        <a class="btn btn-secondary dropdown-toggle" href="#" role="button" id="DropdownRepository" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Repository: </a>
+
+        <div class="dropdown-menu" aria-labelledby="DropdownRepository">
+            @foreach (Repository repo in ViewBag.Repositories)
+            {
+                <a class="dropdown-item" href="#">@repo.Name</a>
+            }
+        </div>
+    </div>
+
+    <div class="input-group date" id="datetimepicker1" data-target-input="nearest">
+        <input type="text" class="form-control datetimepicker-input" data-target="#datetimepicker1" />
+        <div class="input-group-append" data-target="#datetimepicker1" data-toggle="datetimepicker">
+            <div class="input-group-text"><i class="fa fa-calendar"></i></div>
+        </div>
+    </div>
+
 </div>
 
-<ul>
-@foreach (Job job in ViewBag.Jobs)
-{
-    <li>@job.QueueAlias</li>
-}
-</ul>
+<div class="chart-container" id="ResultsChartContainer">
+    <canvas id="ResultsChart"></canvas>
+</div>

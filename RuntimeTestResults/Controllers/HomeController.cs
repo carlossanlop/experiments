@@ -3,7 +3,9 @@ using Microsoft.Extensions.Logging;
 using RuntimeTestResults.Data;
 using RuntimeTestResults.Models;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace RuntimeTestResults.Controllers
 {
@@ -23,10 +25,20 @@ namespace RuntimeTestResults.Controllers
 
             using var db = new KustoContext();
 
-            DateTime from = DateTime.Now - TimeSpan.FromHours(1);
-            DateTime to = DateTime.Now;
+            ViewBag.Repositories = db.Repositories.Where(r => !string.IsNullOrWhiteSpace(r.Name));
 
-            ViewBag.Jobs = db.GetJobs(from, to);
+            //DateTime from = DateTime.Now - TimeSpan.FromHours(1);
+            //DateTime to = DateTime.Now;
+
+            //var jobs = db.GetJobs(from, to);
+
+            //var results = new List<TestResult>();
+            //foreach (Job job in jobs)
+            //{
+            //    results.AddRange(db.GetTestResults(job));
+            //}
+
+            //ViewBag.Results = results;
 
             return View();
         }

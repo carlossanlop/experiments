@@ -30,8 +30,7 @@ namespace RuntimeTestResults.Models
         public int TotalItems { get; set; }
         public string Type { get; set; }
 
-        internal static readonly string Query = @"Jobs
-            | project
+        internal static readonly string Query = @"Jobs | project
                 Attempt,
                 Branch,
                 Finished,
@@ -58,10 +57,10 @@ namespace RuntimeTestResults.Models
                 TotalItems,
                 Type
             | where Branch == ""refs/heads/master""
-                and Repository == ""dotnet/runtime""
+                and Repository == ""{0}""
                 and TeamProject == ""public""
                 and Type startswith ""test/functional/cli""
-                and Started >= todatetime(""{0}"")
-                and Started <= todatetime(""{1}"")";
+                and Started >= todatetime(""{1}"")
+                and Started <= todatetime(""{2}"")";
     }
 }

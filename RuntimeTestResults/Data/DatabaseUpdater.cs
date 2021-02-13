@@ -47,9 +47,19 @@ namespace RuntimeTestResults.Data
                     }
                 }
             }
+
             int saved = _db.SaveChanges();
             Console.WriteLine($"Total repositories downlodaded from Kusto: {repositories.Count()}");
             Console.WriteLine($"Total new repositories added to database: {saved}");
+
+            var emptyRepos = _db.Repositories.Where(r => string.IsNullOrWhiteSpace(r.Name));
+            if (emptyRepos.Any())
+            {
+                Console.WriteLine("Removing empty repos...");
+                _db.RemoveRange(emptyRepos);
+                saved = _db.SaveChanges();
+                Console.WriteLine($"Empty repos removed: {saved}");
+            }
         }
     }
 }

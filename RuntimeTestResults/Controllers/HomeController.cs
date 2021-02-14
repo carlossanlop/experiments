@@ -28,24 +28,7 @@ namespace RuntimeTestResults.Controllers
 
         public IActionResult Index()
         {
-            //using var db = new DatabaseContext();
-            //ViewBag.Repositories = db.Repositories.ToList();
-
             ViewBag.Repositories = _db.Repositories;
-
-            //DateTime from = DateTime.Now - TimeSpan.FromHours(1);
-            //DateTime to = DateTime.Now;
-
-            //var jobs = db.GetJobs(from, to);
-
-            //var results = new List<TestResult>();
-            //foreach (Job job in jobs)
-            //{
-            //    results.AddRange(db.GetTestResults(job));
-            //}
-
-            //ViewBag.Results = results;
-
             return View();
         }
 

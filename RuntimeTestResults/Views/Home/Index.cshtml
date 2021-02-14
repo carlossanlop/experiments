@@ -7,12 +7,12 @@
 
         <!-- Repositories dropdown -->
         <div class="col-4">
-            <select>
+            <select id="RepoInput">
                 <option selected value="">Repository: </option>
-                @foreach (Repository repo in ViewBag.Repositories)
-                {
-                    <option value="@repo.Name">@repo.Name</option>
-                }
+            @foreach (Repository repo in ViewBag.Repositories)
+            {
+                <option value="@repo.Name">@repo.Name</option>
+            }
             </select>
         </div>
 
@@ -49,7 +49,7 @@
     </div>
 </div>
 
-<br />
+<div class="container" id="Alerts">&nbsp;</div>
 
 <div class="container-fluid" id="ResultsChartContainer">
     <canvas id="ResultsChart"></canvas>
@@ -59,58 +59,36 @@
 {
     <script type="text/javascript">
 
-@{
-    string dateTimeFormat = "yyyy/MM/dd hh:mm:ss tt";
-    DateTime now = DateTime.Now;
-}
+    @{
+        string dateTimeFormat = "yyyy/MM/dd hh:mm:ss tt";
+        DateTime now = DateTime.Now;
+    }
 
-    $(function(){
-        $('#datetimepickerFrom').datetimepicker({
-            defaultDate: "@((now - TimeSpan.FromHours(2)).ToString(dateTimeFormat))"
+        $(function(){
+            $('#datetimepickerFrom').datetimepicker({
+                defaultDate: "@((now - TimeSpan.FromHours(2)).ToString(dateTimeFormat))"
+            });
+            $('#datetimepickerTo').datetimepicker({
+                defaultDate: "@(now.ToString(dateTimeFormat))"
+            });
         });
-        $('#datetimepickerTo').datetimepicker({
-            defaultDate: "@(now.ToString(dateTimeFormat))"
-        });
-    });
 
-    var ctx = document.getElementById("ResultsChart");
+        var ctx = document.getElementById("ResultsChart");
 
-    var chart = new Chart(ctx, {
-        type: "line",
-        data: {
-            labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
-            datasets: [{
-                label: "Passrate",
-                data: [12, 19, 3, 5, 2, 3],
-                backgroundColor: [
-                    "rgba(255, 99, 132, 0.2)",
-                    "rgba(54, 162, 235, 0.2)",
-                    "rgba(255, 206, 86, 0.2)",
-                    "rgba(75, 192, 192, 0.2)",
-                    "rgba(153, 102, 255, 0.2)",
-                    "rgba(255, 159, 64, 0.2)"
-                ],
-                borderColor: [
-                    "rgba(255,99,132,1)",
-                    "rgba(54, 162, 235, 1)",
-                    "rgba(255, 206, 86, 1)",
-                    "rgba(75, 192, 192, 1)",
-                    "rgba(153, 102, 255, 1)",
-                    "rgba(255, 159, 64, 1)"
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                yAxes: [{
-                    ticks: {
-                        beginAtZero: true
-                    }
-                }]
+        var options = {
+            type: "line",
+            options: {
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true
+                        }
+                    }]
+                }
             }
-        }
-    });
+        };
+
+        var chart = new Chart(ctx, options);
 
     </script>
 } 

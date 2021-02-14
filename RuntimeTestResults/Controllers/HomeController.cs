@@ -2,7 +2,10 @@
 using Microsoft.Extensions.Logging;
 using RuntimeTestResults.Data;
 using RuntimeTestResults.Models;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace RuntimeTestResults.Controllers
 {
@@ -36,6 +39,21 @@ namespace RuntimeTestResults.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        [HttpGet]
+        public JsonResult GetPoints(string repositoryName, DateTime from, DateTime to)
+        {
+            var repository = _db.Repositories.FirstOrDefault(r => r.Name == repositoryName);
+
+            if (repository == null)
+            {
+                return Json("Error");
+            }
+
+            var jobs = _kusto.GetJobs(repository, from, to);
+
+            return Json(jobs);
         }
     }
 }

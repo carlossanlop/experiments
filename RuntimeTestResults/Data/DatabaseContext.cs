@@ -1,7 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RuntimeTestResults.Models;
-using System;
-using System.Collections.Generic;
 
 namespace RuntimeTestResults.Data
 {

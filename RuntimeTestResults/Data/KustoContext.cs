@@ -20,7 +20,7 @@ namespace RuntimeTestResults.Data
         private readonly KustoConnectionStringBuilder _builder;
         private readonly ICslQueryProvider _provider;
 
-        public IEnumerable<Repository> Repositories
+        public IEnumerable<Repository> RemoteRepositories
         {
             get
             {

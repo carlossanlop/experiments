@@ -1,4 +1,5 @@
-﻿using RuntimeTestResults.Models;
+﻿using Microsoft.Data.Sqlite;
+using RuntimeTestResults.Models;
 using System;
 using System.Linq;
 
@@ -29,9 +30,22 @@ namespace RuntimeTestResults.Data
 
         private void UpdateRepositories()
         {
-            Console.WriteLine("Updating repositories...");
+            Console.WriteLine("Downloading Kusto repositories...");
+            var repositories = _kusto.RemoteRepositories;
+            Console.WriteLine($"Total repositories downloaded: {repositories.Count()}");
 
-            var repositories = _kusto.Repositories;
+            try
+            {
+                Console.WriteLine($"Total repositories in local database: {_db.Repositories.Count()}");
+            }
+            catch (SqliteException)
+            {
+                Console.WriteLine($"The database does not yet exist. Run the website once before updating.");
+                throw;
+            }
+
+            Console.WriteLine("Updating local repositories in database...");
+
             foreach (Repository repo in repositories)
             {
                 if (!string.IsNullOrWhiteSpace(repo.Name))
@@ -49,7 +63,6 @@ namespace RuntimeTestResults.Data
             }
 
             int saved = _db.SaveChanges();
-            Console.WriteLine($"Total repositories downlodaded from Kusto: {repositories.Count()}");
             Console.WriteLine($"Total new repositories added to database: {saved}");
 
             var emptyRepos = _db.Repositories.Where(r => string.IsNullOrWhiteSpace(r.Name));

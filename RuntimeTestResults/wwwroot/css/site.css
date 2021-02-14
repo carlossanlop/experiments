@@ -74,6 +74,6 @@ body {
 -------------------------------------------------- */
 div#ResultsChartContainer {
     position: relative;
-    width: 40vw;
-    height: 20vh;
+    width: 80vw;
+    height: 40vh;
 }

@@ -23,21 +23,15 @@
         </nav>
     </header>
 
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
+    @RenderBody()
 
-    <footer class="border-top footer text-muted">
-        <div class="container">.NET CI test results</div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/lib/chartjs/Chart.js"></script>
     <script src="~/lib/moment.js/moment.min.js"></script>
-    <script src="~/lib/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js" crossorigin="anonymous"></script>
+    <script src="~/lib/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
+    @await RenderSectionAsync("Chart", required: true)
 </body>
 </html>

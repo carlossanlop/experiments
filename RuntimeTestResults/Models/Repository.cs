@@ -11,5 +11,7 @@ namespace RuntimeTestResults.Models
         public string Name { get; set; }
 
         internal static readonly string Query = @"Jobs | distinct Repository";
+
+        public override string ToString() => Name;
     }
 }

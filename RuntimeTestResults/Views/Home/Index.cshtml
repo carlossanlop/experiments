@@ -59,36 +59,53 @@
 {
     <script type="text/javascript">
 
-    @{
-        string dateTimeFormat = "yyyy/MM/dd hh:mm:ss tt";
-        DateTime now = DateTime.Now;
-    }
+@{
+    string dateTimeFormat = "yyyy/MM/dd hh:mm:ss tt";
+    DateTime now = DateTime.Now;
+}
 
-        $(function(){
-            $('#datetimepickerFrom').datetimepicker({
-                defaultDate: "@((now - TimeSpan.FromHours(2)).ToString(dateTimeFormat))"
-            });
-            $('#datetimepickerTo').datetimepicker({
-                defaultDate: "@(now.ToString(dateTimeFormat))"
-            });
+    var chart = CreateChart();
+
+    $(function () {
+        $('#datetimepickerFrom').datetimepicker({
+            defaultDate: "@((now - TimeSpan.FromHours(2)).ToString(dateTimeFormat))",
         });
 
-        var ctx = document.getElementById("ResultsChart");
+        $('#datetimepickerTo').datetimepicker({
+            defaultDate: "@(now.ToString(dateTimeFormat))",
+        });
 
-        var options = {
-            type: "line",
-            options: {
-                scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true
-                        }
-                    }]
-                }
+        $('#datetimepickerFrom').on("change.datetimepicker", ({ date, oldDate }) => { GetPoints(); });
+        $('#datetimepickerTo').on("change.datetimepicker", ({ date, oldDate }) => { GetPoints(); });
+
+        $("#RepoInput").change(function () {
+            if ($("#RepoInput").val() != "")
+            {
+                GetPoints();
             }
+        });
+    });
+
+    function GetPoints() {
+
+        var url = "@Url.Action("GetPoints", "Home")";
+
+        var data = {
+            "repositoryName": $("#RepoInput").val(),
+            "from": $("#FromInput").val(),
+            "to": $("#ToInput").val()
         };
 
-        var chart = new Chart(ctx, options);
+        var success = function (result) {
+            AddChartData(result);
+        };
+
+        var error = function (result) {
+            AddAlert(result.status + ": " + result.statusText);
+        };
+
+        CallAjax(url, data, success, error);
+    }
 
     </script>
 } 

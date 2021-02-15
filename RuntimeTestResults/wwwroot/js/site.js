@@ -1,6 +1,28 @@
 ﻿// For details on configuring this project to bundle and minify static web assets:
 // https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
 
+function CreateChart() {
+
+    var ctx = document.getElementById("ResultsChart");
+
+    var options = {
+        type: "line",
+        options: {
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true
+                    }
+                }]
+            }
+        }
+    };
+
+    var chart = new Chart(ctx, options);
+
+    return chart;
+}
+
 function GetAlert(message) {
     var str = '<div class="alert alert-warning alert-dismissible fade show" role="alert">';
     str += message;
@@ -8,28 +30,56 @@ function GetAlert(message) {
     str += '<span aria-hidden="true">&times;</span>';
     str += '</button>';
     str += '</div>';
+    return str;
 }
 
-function GetPoints() {
+function AddAlert(str) {
+    var alert = GetAlert(str);
+    $("#Alerts").html($("#Alerts").html() + alert);
+}
+
+function CallAjax(url, data, success, error) {
     $.ajax({
-        url: "/GetPoints",
+        url: url,
         type: "GET",
-        data: {
-            "repositoryName": $("#RepoInput").val(),
-            "from": $("#FromInput").val(),
-            "to": $("#ToInput").val()
-        },
-        success: function (result) {
-            AddData(result);
-        },
-        error: function (result) {
-            var alert = GetAlert(result);
-            $("#Alerts").html(alert);
-        }
+        dataType: "json",
+        contentType: "application/json; charset=utf-8",
+        data: data,
+        success: success,
+        error: error
     });
 }
 
-function AddData(chart, label, data) {
+function AddChartData(jobs) {
+
+    var labels = [];
+    var datas = [];
+    var backgroundColors = [];
+    var borderColors = [];
+
+    $.each(jobs, function (i, job) {
+
+        labels.push(job.FinishedShort);
+
+        var passrate = parseFloat(job.TestsPass * 100.0 / (job.TestsFail + job.TestsPass));
+        datas.push(passrate);
+
+        backgroundColors.push("rgba(255, 0, 0, 0)");
+        borderColors.push("rgba(200, 0, 0, 0)");
+    });
+
+    var dataset = {
+        label: "Jobs",
+        data: datas,
+        backgroundColor: backgroundColors,
+        borderColor: borderColors,
+        borderWidth: 1
+    };
+
+    chart.data.labels = labels;
+    chart.data.datasets = dataset;
+    chart.update();
+
     /*{
     labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
         datasets: [{
@@ -54,10 +104,10 @@ function AddData(chart, label, data) {
             borderWidth: 1
         }]
     }*/
-    chart.data.labels.push(label);
-    chart.data.datasets.forEach((dataset) => {
-        dataset.data.push(data);
-    });
-    chart.update();
+    //chart.data.labels.push(label);
+    //chart.data.datasets.forEach((dataset) => {
+    //    dataset.data.push(data);
+    //});
+    //chart.update();
 }
 

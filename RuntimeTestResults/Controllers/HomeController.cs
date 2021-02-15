@@ -42,17 +42,10 @@ namespace RuntimeTestResults.Controllers
         }
 
         [HttpGet]
-        public JsonResult GetPoints(string repositoryName, DateTime from, DateTime to)
+        public IActionResult GetPoints(string repositoryName, DateTime from, DateTime to)
         {
-            var repository = _db.Repositories.FirstOrDefault(r => r.Name == repositoryName);
-
-            if (repository == null)
-            {
-                return Json("Error");
-            }
-
+            Repository repository = _db.Repositories.First(r => r.Name == repositoryName);
             var jobs = _kusto.GetJobs(repository, from, to);
-
             return Json(jobs);
         }
     }

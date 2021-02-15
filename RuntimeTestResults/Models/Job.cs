@@ -7,6 +7,7 @@ namespace RuntimeTestResults.Models
         public string Attempt { get; set; }
         public string Branch { get; set; }
         public DateTime Finished { get; set; }
+        public string FinishedShort => Finished.ToString("yyyy/MM/dd HH:mm");
         public int InitialItems { get; set; }
         public int ItemsBadExit { get; set; }
         public int ItemsError { get; set; }
@@ -19,9 +20,11 @@ namespace RuntimeTestResults.Models
         public string Properties { get; set; }
         public string QueueAlias { get; set; }
         public DateTime Queued { get; set; }
+        public string QueuedShort => Queued.ToString("yyyy/MM/dd HH:mm");
         public Repository Repository { get; set; }
         public string Source { get; set; }
         public DateTime Started { get; set; }
+        public string StartedShort => Started.ToString("yyyy/MM/dd HH:mm");
         public string TeamProject { get; set; }
         public int TestsFail { get; set; }
         public int TestsPass { get; set; }

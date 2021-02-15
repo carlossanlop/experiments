@@ -1,13 +1,6 @@
-using Kusto.Data;
-using Kusto.Data.Common;
-using Kusto.Data.Net.Client;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using RuntimeTestResults.Data;
-using RuntimeTestResults.Models;
-using System;
-using System.Data;
-using System.Linq;
 
 namespace RuntimeTestResults
 {

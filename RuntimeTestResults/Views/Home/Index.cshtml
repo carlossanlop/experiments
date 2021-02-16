@@ -9,10 +9,10 @@
         <div class="col-4">
             <select id="RepoInput">
                 <option selected value="">Repository: </option>
-            @foreach (Repository repo in ViewBag.Repositories)
-            {
-                <option value="@repo.Name">@repo.Name</option>
-            }
+                @foreach (Repository repo in ViewBag.Repositories)
+                {
+                    <option value="@repo.Name">@repo.Name</option>
+                }
             </select>
         </div>
 
@@ -52,19 +52,40 @@
 <div class="container" id="Alerts">&nbsp;</div>
 
 <div class="container-fluid" id="ResultsChartContainer">
-    <canvas id="ResultsChart"></canvas>
+    <canvas id="ChartCanvas"></canvas>
+</div>
+
+<div class="modal fade" id="ModalDialog" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="ModalDialogTitle">&nbsp;</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="ModalDialogBody">&nbsp;</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 @section Chart
 {
     <script type="text/javascript">
 
+    // Initialization of UI elements
+
 @{
     string dateTimeFormat = "yyyy/MM/dd hh:mm:ss tt";
     DateTime now = DateTime.Now;
 }
+    var urlGetRepoJobs = "@Url.Action("GetRepoJobs", "Home")";
 
-    var chart = CreateChart();
+    var canvasElement = document.getElementById("ChartCanvas");
+    var chart = CreateChart(canvasElement);
 
     $(function () {
         $('#datetimepickerFrom').datetimepicker({
@@ -75,37 +96,14 @@
             defaultDate: "@(now.ToString(dateTimeFormat))",
         });
 
-        $('#datetimepickerFrom').on("change.datetimepicker", ({ date, oldDate }) => { GetPoints(); });
-        $('#datetimepickerTo').on("change.datetimepicker", ({ date, oldDate }) => { GetPoints(); });
+        $('#datetimepickerFrom').on("change.datetimepicker", ({ date, oldDate }) => { GetRepoJobs(); });
+
+        $('#datetimepickerTo').on("change.datetimepicker", ({ date, oldDate }) => { GetRepoJobs(); });
 
         $("#RepoInput").change(function () {
-            if ($("#RepoInput").val() != "")
-            {
-                GetPoints();
-            }
+            if ($("#RepoInput").val() != "") { GetRepoJobs(); }
         });
     });
 
-    function GetPoints() {
-
-        var url = "@Url.Action("GetPoints", "Home")";
-
-        var data = {
-            "repositoryName": $("#RepoInput").val(),
-            "from": $("#FromInput").val(),
-            "to": $("#ToInput").val()
-        };
-
-        var success = function (result) {
-            AddChartData(result);
-        };
-
-        var error = function (result) {
-            AddAlert(result.status + ": " + result.statusText);
-        };
-
-        CallAjax(url, data, success, error);
-    }
-
     </script>
-} 
+}

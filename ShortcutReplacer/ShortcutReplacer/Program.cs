@@ -63,11 +63,7 @@ namespace ShortcutReplacer
             {
                 ShouldIncludePredicate = (ref FileSystemEntry entry) =>
                 {
-                    string fullPath = entry.ToFullPath();
-                    string fileName = Path.GetFileNameWithoutExtension(fullPath);
-                    return !entry.IsDirectory &&
-                            Path.GetExtension(fullPath) == ".md" &&
-                            fileName.EndsWith("-md");
+                    return !entry.IsDirectory && Path.GetExtension(entry.ToFullPath()) == ".md";
                 }
             };
 
@@ -75,7 +71,7 @@ namespace ShortcutReplacer
             foreach (string file in enumeration)
             {
                 string contents = File.ReadAllText(file).Trim();
-                if (contents.Length <= 50)
+                if (contents.Length <= 80)
                 {
                     string path = file.Replace(@"D:\dotnet-api-docs\includes\", @"~/includes/");
                     dict.TryAdd<string, string>(path, contents);

@@ -19,30 +19,32 @@ namespace ShortcutReplacer
             {
                 Console.WriteLine($"Shortcut: {mdPath}");
                 Console.WriteLine();
+                int total = 0;
                 foreach (string xmlPath in xmlPaths)
                 {
-                    Replace(xmlPath, mdPath, mdContents);
+                    total += Replace(xmlPath, mdPath, mdContents);
                 }
-                Console.WriteLine($"--------------- Finished {mdPath} --------------");
                 Console.WriteLine();
+                Console.WriteLine($"--------------- Total for {mdPath} : {total} --------------");
+                Console.WriteLine(); // Put a breakpoint here to merge each substitution in an individual commit
             }
         }
 
-        static void Replace(string xmlPath, string mdPath, string mdContents)
+        static int Replace(string xmlPath, string mdPath, string mdContents)
         {
             string xmlContents = File.ReadAllText(xmlPath);
             if (xmlContents.Contains(mdPath))
             {
                 Console.WriteLine();
                 Console.WriteLine($"Replacing {xmlPath}");
-                string pattern = $@"\[\!INCLUDE\[[a-zA-Z0-9_\-]+\]\({mdPath}\)\]";
+                string pattern = $@"\[\!INCLUDE\[[a-zA-Z0-9_\-\#\$ \t\@\%\&\*\+\=]+\]\({mdPath}\)\]";
                 string updated = Regex.Replace(xmlContents, pattern, mdContents);
                 File.WriteAllText(xmlPath, updated);
+                return 1;
             }
-            else
-            {
-                Console.Write('.');
-            }
+
+            Console.Write('.');
+            return 0;
         }
 
         static Dictionary<string, string> GetShortcuts()
@@ -103,8 +105,7 @@ namespace ShortcutReplacer
             {
                 ShouldIncludePredicate = (ref FileSystemEntry entry) => {
                     return !entry.IsDirectory &&
-                            Path.GetExtension(entry.ToFullPath()) == ".xml" &&
-                            (entry.Directory.StartsWith("System") || entry.Directory.StartsWith("Microsoft."));
+                            Path.GetExtension(entry.ToFullPath()) == ".xml";
                 }
             };
 

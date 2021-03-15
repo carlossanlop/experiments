@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "MyProject": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_MULTILEVEL_LOOKUP": "0",
+        "DOTNET_ROOT": "D:\\runtime\\artifacts\\bin\\testhost\\net6.0-windows-Release-x64\\",
+        "DOTNET_SYSTEM_IO_USELEGACYFILESTREAM": "0",
+        "PATH": "%DOTNET_ROOT%;%PATH%"
+      }
+    }
+  }
+}

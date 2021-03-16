@@ -28,9 +28,11 @@ namespace MyNamespace
             // CheckEnvVars("DOTNET_ROOT", "DOTNET_MULTILEVEL_LOOKUP", "DOTNET_SYSTEM_IO_USELEGACYFILESTREAM", "PATH");
             // Console.WriteLine("Successful checks! Starting test...");
 
-            for (int i = 0; i < 30000; i++)
+            // Same (not too large) number of iterations for all runs, to ensure a 1:1 comparison
+            for (int i = 1; i <= 250; i++)
             {
-                await CopyToAsync(FourKibibytes, FileOptions.Asynchronous);
+                // Method to test goes here
+                //await WriteAsync(FourKibibytes, HalfKibibyte, FileOptions.Asynchronous);
             }
         }
 

@@ -3,9 +3,11 @@
     "MyProject": {
       "commandName": "Project",
       "environmentVariables": {
+        "COMPlus_ReadyToRun": "0",
         "DOTNET_MULTILEVEL_LOOKUP": "0",
         "DOTNET_SYSTEM_IO_USENET5COMPATFILESTREAM": "0",
         "DOTNET_ROOT": "D:\\runtime\\artifacts\\bin\\testhost\\net6.0-windows-Release-x64\\",
+        "COMPlus_ZapDisable": "1",
         "PATH": "%DOTNET_ROOT%;%PATH%"
       }
     }

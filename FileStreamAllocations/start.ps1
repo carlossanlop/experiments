@@ -14,5 +14,5 @@ $Env:PATH=$Env:DOTNET_ROOT + ";" + $Env:PATH
 Write-Output "PATH VARIABLE: $Env:PATH"
 
 $devenv="C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe"
-$sln="D:\testing\ConsoleCore\MySolution.sln"
+$sln="D:\experiments\FileStreamAllocations\MySolution.sln"
 &($devenv) $sln

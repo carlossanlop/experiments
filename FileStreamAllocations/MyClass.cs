@@ -29,7 +29,7 @@ namespace MyNamespace
             // Console.WriteLine("Successful checks! Starting test...");
 
             // Same (not too large) number of iterations for all runs, to ensure a 1:1 comparison
-            for (int i = 1; i <= 250; i++)
+            for (int i = 1; i <= 2000; i++)
             {
                 // Method to test goes here
                 //await WriteAsync(FourKibibytes, HalfKibibyte, FileOptions.Asynchronous);
@@ -169,8 +169,8 @@ namespace MyNamespace
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static async Task<long> ReadAsync(
-            int bufferSize,     // 1, FourKibibytes
-            int userBufferSize, // HalfKibibyte, FourKibibytes
+            int userBufferSize,
+            int streamBufferSize,
             FileOptions options)
         {
             CancellationToken cancellationToken = CancellationToken.None;

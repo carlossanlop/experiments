@@ -17,5 +17,7 @@ SET PATH=%DOTNET_ROOT%;%PATH%
 
 echo PATH VARIABLE: %PATH%
 
+SET SLN=D:\experiments\FileStreamAllocations\MySolution.sln
+
 :: This starts VS
-"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe" "D:\testing\ConsoleCore\MySolution.sln"
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.exe" %SLN%

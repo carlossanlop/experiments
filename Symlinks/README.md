@@ -19,7 +19,7 @@
 
 # Epic
 
-TODO: Create issue
+[#51605](https://github.com/dotnet/runtime/issues/51605) Developers using filesystem APIs find them to work well with symbolic links
 
 # Issues
 

@@ -1,37 +1,3 @@
-
-Need to create new APIs that allow creating symbolic links, but can be easily expanded to create hard links, junctions, etc.
-
-Need to add support for enumeration filtering of symbolic links. Ideally, only expand the FileSystemEnumerable APIs.
-
-On Windows, there's differentiation between a link to a dir and a link to a file. On Unix, there isn't.
-
-The APIs must create a symbolic link and represent it with the *Info instance, and have another API that provides a reference to the target.
-
-Need to support following the symlinks up to its final target, when they are chained, and make sure no cycles are found.
-
-Windows types of links
-
-https://cects.com/overview-to-understanding-hard-links-junction-points-and-symbolic-links-in-windows/
-
-- Hard link: a link to a local file/directory handle. Deleting the hard link deletes the target. If target is moved, hard link stays valid.
--  Junction: a legacy symbolic link that targets the absolute path of a local directory. Deleting the junction does not delete the directory. If target is moved, junction turns invalid. Drag and dropping the junction to another location, moves the actual directory to that location, without deleting the original directory (but will now be empty).
-- Symbolic link: a link that targets the relative or absolute path of a local or remote file or directory. Deleting the symbolic link does not delete the target. Moving the target turns the symbolic link invalid.
-- App execution aliases: a new special kind of symbolic link with a custom reparse point that allows targeting a Windows Store app via a "fake" executable that weighs 0 bytes, which is linked to the real file.
-        https://www.tiraniddo.dev/2019/09/overview-of-windows-execution-aliases.html
-        https://stackoverflow.com/questions/62474046/how-do-i-find-the-target-of-a-windows-app-execution-alias-in-c-win32-api
-
-
-Windows links to folders:
-- Junction
-- Symbolic link
-
-Windows links to files:
-- Hard link
-- Symbolic link
-- App execution aliases
-
-
-
 <details>
 
 <summary>Proposal</summary>
@@ -408,3 +374,38 @@ foreach (FileSystemInfo info in enumerable)
 }
 ```
 </details>
+
+
+---
+
+Need to create new APIs that allow creating symbolic links, but can be easily expanded to create hard links, junctions, etc.
+
+Need to add support for enumeration filtering of symbolic links. Ideally, only expand the FileSystemEnumerable APIs.
+
+On Windows, there's differentiation between a link to a dir and a link to a file. On Unix, there isn't.
+
+The APIs must create a symbolic link and represent it with the *Info instance, and have another API that provides a reference to the target.
+
+Need to support following the symlinks up to its final target, when they are chained, and make sure no cycles are found.
+
+Windows types of links
+
+https://cects.com/overview-to-understanding-hard-links-junction-points-and-symbolic-links-in-windows/
+
+- Hard link: a link to a local file/directory handle. Deleting the hard link deletes the target. If target is moved, hard link stays valid.
+-  Junction: a legacy symbolic link that targets the absolute path of a local directory. Deleting the junction does not delete the directory. If target is moved, junction turns invalid. Drag and dropping the junction to another location, moves the actual directory to that location, without deleting the original directory (but will now be empty).
+- Symbolic link: a link that targets the relative or absolute path of a local or remote file or directory. Deleting the symbolic link does not delete the target. Moving the target turns the symbolic link invalid.
+- App execution aliases: a new special kind of symbolic link with a custom reparse point that allows targeting a Windows Store app via a "fake" executable that weighs 0 bytes, which is linked to the real file.
+        https://www.tiraniddo.dev/2019/09/overview-of-windows-execution-aliases.html
+        https://stackoverflow.com/questions/62474046/how-do-i-find-the-target-of-a-windows-app-execution-alias-in-c-win32-api
+
+
+Windows links to folders:
+- Junction
+- Symbolic link
+
+Windows links to files:
+- Hard link
+- Symbolic link
+- App execution aliases
+

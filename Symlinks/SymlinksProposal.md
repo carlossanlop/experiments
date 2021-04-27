@@ -5,9 +5,9 @@
 ```cs
 public abstract class FileSystemInfo
 {
-    public void CreateSymbolicLink(string targetPath);
+    public void CreateAsSymbolicLink(string pathToTarget);
     public bool IsSymbolicLink { get; }
-    FileSystemInfo? GetTargetInfo(bool followSymbolicLink);
+    FileSystemInfo? GetTargetInfo(bool followLinks /* could be also called traverseLinks */);
 }
 
 //// Future additional APIs:
@@ -41,20 +41,20 @@ file.Create().Dispose();
 
 var link1 = new FileInfo("/path/link1");
 link1.CreateSymbolicLink(targetPath: file.FullPath);
-// No need to follow to final target, it's direct
-var target1 = link1.GetTargetInfo(followSymbolicLink: false);
+// No need to follow to final target.
+var target1 = link1.GetTargetInfo();
 Console.WriteLine(target1.FullPath); // /path/file.txt
 
 var link2a = new FileInfo("/path/link2a");
 link2a.CreateSymbolicLink(targetPath: link1.FullPath);
 // Skips link1 and returns final target
-var target2a = link2a.GetTargetInfo();
+var target2a = link2a.GetTargetInfo(followLinks: true);
 Console.WriteLine(target2a.FullPath); // /path/file.txt
 
 var link2b = new FileInfo("/path/link2b");
 // Won't skip link1, will return link1 as the target
 link2b.CreateSymbolicLink(targetPath: link1.FullPath);
-var target2b = link2b.GetTargetInfo(followSymbolicLink: false);
+var target2b = link2b.GetTargetInfo(followLinks: false);
 Console.WriteLine(target2b.FullPath); // /path/link1, instead of /path/file.txt
 
 
@@ -79,7 +79,7 @@ Console.WriteLine(target1.FullPath); // /path/directory
 var link2a = new DirectoryInfo("/path/link2a");
 link2a.CreateSymbolicLink(targetPath: link1.FullPath);
 // Skips link1 and returns final target
-var target2a = link2a.GetTargetInfo();
+var target2a = link2a.GetTargetInfo(followLinks: true);
 Console.WriteLine(target2a.FullPath); // /path/directory
 
 var link2b = new DirectoryInfo("/path/link2b");
@@ -145,9 +145,9 @@ link2.CreateSymbolicLink(targetPath: "/path/link3");
 var link3 = new FileInfo("/path/link3");
 link3.CreateSymbolicLink(targetPath: "/path/link1");
 
-// Throws because we follow symlinks by default
+// Throws because we opted-in to follow symlinks and there is a cycle.
 // and a circular reference is found on link3 to link1
-var target3 = link3.GetTargetInfo();
+var target3 = link3.GetTargetInfo(followLinks: true);
 
 
 /////////////////////////
@@ -177,7 +177,7 @@ var enumerable = new FileSystemEnumerable<FileSystemInfo>(@"/path/to/directory",
 foreach (FileSystemInfo info in enumerable)
 {
     string path = info.IsSymbolicLink ? 
-        info.GetTargetInfo().FullPath : // Follows symlink to final target
+        info.GetTargetInfo(followLinks: true).FullPath : // Follows symlink to final target
         info.FullPath;
     Console.WriteLine(path);
 }

@@ -6,8 +6,7 @@
 public abstract class FileSystemInfo
 {
     public void CreateAsSymbolicLink(string pathToTarget);
-    public bool IsSymbolicLink { get; }
-    FileSystemInfo? GetTargetInfo(bool followLinks /* could be also called traverseLinks */);
+    FileSystemInfo? GetTargetInfo(bool returnFinalTarget = true);
 }
 
 //// Future additional APIs:
@@ -40,22 +39,24 @@ var file = new FileInfo("/path/file.txt");
 file.Create().Dispose();
 
 var link1 = new FileInfo("/path/link1");
-link1.CreateSymbolicLink(targetPath: file.FullPath);
-// No need to follow to final target.
-var target1 = link1.GetTargetInfo();
+link1.CreateAsSymbolicLink(file.FullPath);
+
+FileSystemInfo target1 = link1.GetTargetInfo();
 Console.WriteLine(target1.FullPath); // /path/file.txt
 
 var link2a = new FileInfo("/path/link2a");
-link2a.CreateSymbolicLink(targetPath: link1.FullPath);
-// Skips link1 and returns final target
-var target2a = link2a.GetTargetInfo(followLinks: true);
+link2a.CreateAsSymbolicLink(link1.FullPath);
+
+// By default skips links in between and returns final target.
+FileSystemInfo target2a = link2a.GetTargetInfo();
 Console.WriteLine(target2a.FullPath); // /path/file.txt
 
 var link2b = new FileInfo("/path/link2b");
-// Won't skip link1, will return link1 as the target
-link2b.CreateSymbolicLink(targetPath: link1.FullPath);
-var target2b = link2b.GetTargetInfo(followLinks: false);
-Console.WriteLine(target2b.FullPath); // /path/link1, instead of /path/file.txt
+link2b.CreateAsSymbolicLink(targetPath: link1.FullPath);
+
+// Won't skip link1, will return it as the target.
+FileSystemInfo target2b = link2b.GetTargetInfo(returnFinalTarget: false);
+Console.WriteLine(target2b.FullPath); // /path/link1
 
 
 /////////////////////////
@@ -71,39 +72,40 @@ directory.Create();
 // The symlink itself needs to be represented with a DirectoryInfo instance
 // because Windows cares about the underlying type
 var link1 = new DirectoryInfo("/path/link1");
-link1.CreateSymbolicLink(targetPath: directory.FullPath); 
+link1.CreateAsSymbolicLink(targetPath: directory.FullPath); 
+
 // No need to follow to final target, it's direct
-var target1 = link2b.GetTargetInfo(followSymbolicLink: false);
+FileSystemInfo target1 = link2b.GetTargetInfo();
 Console.WriteLine(target1.FullPath); // /path/directory
 
 var link2a = new DirectoryInfo("/path/link2a");
-link2a.CreateSymbolicLink(targetPath: link1.FullPath);
+link2a.CreateAsSymbolicLink(link1.FullPath);
+
 // Skips link1 and returns final target
-var target2a = link2a.GetTargetInfo(followLinks: true);
+FileSystemInfo target2a = link2a.GetTargetInfo();
 Console.WriteLine(target2a.FullPath); // /path/directory
 
 var link2b = new DirectoryInfo("/path/link2b");
+
 // Won't skip link1, will return link1 as the target
-link2b.CreateSymbolicLink(targetPath: link1.FullPath);
-var target2b = link2b.GetTargetInfo(followSymbolicLink: false);
+link2b.CreateAsSymbolicLink(link1.FullPath);
+FileSystemInfo target2b = link2b.GetTargetInfo(returnFinalTarget: false);
 Console.WriteLine(target2b.FullPath); // /path/link1
 
 
 /////////////////////////
 //// Non-existent target
 
-var file = new FileInfo("/non/existent/file.txt");
-
 var link1 = new FileInfo("/path/link1");
 // Should succeed to create symlink file, even though target does not exist
-link1.CreateSymbolicLink(targetPath: file.FullPath);
-var target1 = link1.GetTargetInfo();
+link1.CreateAsSymbolicLink("/non/existent/file.txt");
+FileSystemInfo target1 = link1.GetTargetInfo();
 Console.WriteLine(target1.FullPath); // Should print /non/existent/file.txt
 
 var link2 = new FileInfo("/path/link2");
-link2.CreateSymbolicLink(targetPath: link2.FullPath); // skips link1
+link2.CreateAsSymbolicLink(targetPath: link2.FullPath); // skips link1
 // Follows symlinks and stops at file.txt, even if it does not exist
-var target2 = link2.GetTargetInfo();
+FileSystemInfo target2 = link2.GetTargetInfo();
 Console.WriteLine(target2.FullPath); // Should print /non/existent/file.txt
 
 
@@ -115,12 +117,12 @@ var directory = new DirectoryInfo("/path/directory");
 directory.Create();
 
 var link = new DirectoryInfo("/path/link");
-link.CreateSymbolicLink(targetPath: directory.FullPath);
+Link.CreateSymbolicLink(targetPath: directory.FullPath);
 
 // This DirectoryInfo wraps the symlink that was created above
 // so we should return a valid TargetInfo when requested
 var existingLink = new DirectoryInfo("/path/link");
-var existingTarget = existingLink.GetTargetInfo();
+FileSystemInfo existingTarget = existingLink.GetTargetInfo();
 Console.WriteLine(existingTarget.FullPath); // Should print /path/directory
 
 
@@ -132,27 +134,26 @@ directory.Create();
 
 // The user should've used DirectoryInfo to wrap the link to a directory
 var link = new FileInfo("/path/link");
-link.CreateSymbolicLink(targetPath: directory.FullPath); // Should throw because target is a directory
+Link.CreateSymbolicLink(targetPath: directory.FullPath); // Should throw because target is a directory
 
 
 /////////////////////////
 // Circular reference
 
 var link1 = new FileInfo("/path/link1");
-link1.CreateSymbolicLink(targetPath: "/path/link2");
+link1.CreateAsSymbolicLink(targetPath: "/path/link2");
 var link2 = new FileInfo("/path/link2");
-link2.CreateSymbolicLink(targetPath: "/path/link3");
+link2.CreateAsSymbolicLink(targetPath: "/path/link3");
 var link3 = new FileInfo("/path/link3");
-link3.CreateSymbolicLink(targetPath: "/path/link1");
+link3.CreateAsSymbolicLink(targetPath: "/path/link1");
 
 // Throws because we opted-in to follow symlinks and there is a cycle.
 // and a circular reference is found on link3 to link1
-var target3 = link3.GetTargetInfo(followLinks: true);
+FileSystemInfo target3 = link3.GetTargetInfo(followLinks: true);
 
 
 /////////////////////////
 // Recursive enumeration directory with symlinks
-// Using the IsSymbolicLink property
 
 // directory
 // - subdirectory1
@@ -176,7 +177,9 @@ var enumerable = new FileSystemEnumerable<FileSystemInfo>(@"/path/to/directory",
 
 foreach (FileSystemInfo info in enumerable)
 {
-    string path = info.IsSymbolicLink ? 
+    // No need to add an API to signal that a FSI is Symbolic Link.
+    // Warning: ReparsePoint is not exclusive of Symbolic Links.
+    string path = info.Attributes.HasFlag(FileAttributes.ReparsePoint) ? 
         info.GetTargetInfo(followLinks: true).FullPath : // Follows symlink to final target
         info.FullPath;
     Console.WriteLine(path);
@@ -210,18 +213,24 @@ public enum FileType
 public abstract class FileSystemInfo
 {
     FileType FileType { get; }
-    FileSystemInfo? GetTargetInfo(bool followSymbolicLink = true); // Final target should be default
+    FileSystemInfo? GetTargetInfo(bool returnFinalTarget = true); // Final target should be default
 }
 
-// Similar purpose to the File and Directory types
-public static class Link
+public static class File
 {
-    // Returns an object that can be casted to DirectoryInfo or FileInfo
-    static FileSystemInfo CreateSymbolicLink(string path, string targetPath);
+    static FileInfo CreateSymbolicLink(string path, string targetPath);
+
+    //// Future additional APIs:
+    // static FileInfo CreateHardLink(string path, string targetPath);
+}
+
+public static class Directory
+{
+
+    static DirectoryInfo CreateSymbolicLink(string path, string targetPath);
 
     //// Future additional APIs:
     // static DirectoryInfo CreateJunction(string path, string targetPath);
-    // static FileInfo CreateHardLink(string path, string targetPath);
 }
 ```
 
@@ -242,19 +251,19 @@ public static class Link
 var file = new FileInfo("/path/file.txt");
 file.Create().Dispose();
 
-FileInfo link1 = Link.CreateSymbolicLink(path: "/path/link1", targetPath: file.FullPath);
-// No need to follow to final target, it's direct
-var target1 = link1.GetTargetInfo(followSymbolicLink: false);
+FileInfo link1 = File.CreateSymbolicLink(path: "/path/link1", targetPath: file.FullPath) as FileInfo;
+
+FileSystemInfo target1 = link1.GetTargetInfo();
 Console.WriteLine(target1.FullPath); // /path/file.txt
 
-FileInfo link2a = Link.CreateSymbolicLink(path: "/path/link2a", targetPath: link1.FullPath);
+FileInfo link2a = File.CreateSymbolicLink(path: "/path/link2a", targetPath: link1.FullPath);
 // Skips link1 and returns final target
-var target2a = link2a.GetTargetInfo();
+FileSystemInfo target2a = link2a.GetTargetInfo();
 Console.WriteLine(target2a.FullPath); // /path/file.txt
 
-var link2b = Link.CreateSymbolicLink(path: "/path/link2b", targetPath: link1.FullPath);
+FileInfo link2b = File.CreateSymbolicLink(path: "/path/link2b", targetPath: link1.FullPath);
 // Won't skip link1, will return link1 as the target
-var target2b = link2b.GetTargetInfo(followSymbolicLink: false);
+FileSystemInfo target2b = link2b.GetTargetInfo(returnFinalTarget: false);
 Console.WriteLine(target2b.FullPath); // /path/link1, instead of /path/file.txt
 
 
@@ -270,108 +279,20 @@ directory.Create();
 
 // The symlink itself needs to be represented with a DirectoryInfo instance
 // because Windows cares about the underlying type
-DirectoryInfo link1 = Link.CreateSymbolicLink(path: "/path/link1", targetPath: directory.FullPath); 
-// No need to follow to final target, it's direct
-var target1 = link2b.GetTargetInfo(followSymbolicLink: false);
+DirectoryInfo link1 = Directory.CreateSymbolicLink(path: "/path/link1", targetPath: directory.FullPath); 
+
+FileSystemInfo target1 = link2b.GetTargetInfo();
 Console.WriteLine(target1.FullPath); // /path/directory
 
-DirectoryInfo link2a = Link.CreateSymbolicLink(path: "/path/link2a", targetPath: link1.FullPath);
+DirectoryInfo link2a = Directory.CreateSymbolicLink(path: "/path/link2a", targetPath: link1.FullPath);
 // Skips link1 and returns final target
-var target2a = link2a.GetTargetInfo();
+FileSystemInfo target2a = link2a.GetTargetInfo();
 Console.WriteLine(target2a.FullPath); // /path/directory
 
-DirectoryInfo link2b = Link.CreateSymbolicLink(path: "/path/link2b", targetPath: link1.FullPath);
+DirectoryInfo link2b = Directory.CreateSymbolicLink(path: "/path/link2b", targetPath: link1.FullPath);
 // Won't skip link1, will return link1 as the target
-var target2b = link2b.GetTargetInfo(followSymbolicLink: false);
+FileSystemInfo target2b = link2b.GetTargetInfo(returnFinalTarget: false);
 Console.WriteLine(target2b.FullPath); // /path/link1
-
-
-/////////////////////////
-//// Non-existent target
-
-var file = new FileInfo("/non/existent/file.txt");
-
-// Should succeed to create symlink file, even though target does not exist
-FileInfo link1 = Link.CreateSymbolicLink(path: "/path/link1", targetPath: file.FullPath);
-var target1 = link1.GetTargetInfo();
-Console.WriteLine(target1.FullPath); // Should print /non/existent/file.txt
-
-FileInfo link2 = Link.CreateSymbolicLink(path: "/path/link2", targetPath: link2.FullPath); // skips link1
-// Follows symlinks and stops at file.txt, even if it does not exist
-var target2 = link2.GetTargetInfo();
-Console.WriteLine(target2.FullPath); // Should print /non/existent/file.txt
-
-
-
-/////////////////////////
-//// Existing symlink
-
-var directory = new DirectoryInfo("/path/directory");
-directory.Create();
-
-DirectoryInfo link = Link.CreateSymbolicLink(path: "/path/link", targetPath: directory.FullPath);
-
-// This DirectoryInfo wraps the symlink that was created above
-// so we should return a valid TargetInfo when requested
-var existingLink = new DirectoryInfo("/path/link");
-var existingTarget = existingLink.GetTargetInfo();
-Console.WriteLine(existingTarget.FullPath); // Should print /path/directory
-
-
-/////////////////////////
-// Inconsistent symlink target and *Info type
-
-var directory = new DirectoryInfo("/path/directory");
-directory.Create();
-
-// The user should've used DirectoryInfo to wrap the link to a directory
-// Should throw because target is a directory
-FileInfo link = Link.CreateSymbolicLink(path: "/path/link", targetPath: directory.FullPath); 
-
-
-/////////////////////////
-// Circular reference
-
-FileInfo link1 = Link.CreateSymbolicLink(path: "/path/link1", targetPath: "/path/link2");
-FileInfo link2 = Link.CreateSymbolicLink(path: "/path/link2", targetPath: "/path/link3");
-FileInfo link3 = Link.CreateSymbolicLink(path: "/path/link3", targetPath: "/path/link1");
-
-// Throws because we follow symlinks by default
-// and a circular reference is found on link3 to link1
-var target3 = link3.GetTargetInfo();
-
-
-/////////////////////////
-// Recursive enumeration directory with symlinks
-// Using the IsSymbolicLink property
-
-// directory
-// - subdirectory1
-//    - file.txt
-//    - symlink1 -> file.txt
-// - subdirectory2
-//    - symlink2 -> symlink1
-
-FileSystemEnumerable<FileSystemInfo>.FindTransform transform =
-    (ref FileSystemEntry entry) => entry.ToFileSystemInfo();
-
-EnumerationOptions options = new EnumerationOptions
-{
-    RecurseSubdirectories = true
-};
-
-var enumerable = new FileSystemEnumerable<FileSystemInfo>(@"/path/to/directory", transform, options)
-{
-    ShouldRecursePredicate = (ref FileSystemEntry entry) => entry.IsDirectory
-};
-
-foreach (FileSystemInfo info in enumerable)
-{
-    string path = info.IsSymbolicLink ? 
-        info.GetTargetInfo().FullPath : // Follows symlink to final target
-        info.FullPath;
-    Console.WriteLine(path);
-}
 ```
 </details>
 

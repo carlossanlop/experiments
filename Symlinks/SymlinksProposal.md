@@ -8,44 +8,26 @@ The ability to interact with symbolic links in .NET is currently limited to dete
 public abstract class FileSystemInfo
 {
     public void CreateAsSymbolicLink(string pathToTarget);
-    FileSystemInfo? GetTargetInfo(bool returnFinalTarget = true); // Final target should be default
+    // In case of chained links, final target should be returned by default.
+    public FileSystemInfo? GetTargetInfo(bool returnFinalTarget = true); 
 }
 ```
 
-## Descriptions
-
-### Creating a symbolic link
+# Alternative design
 
 ```cs
-void CreateAsSymbolicLink(string pathToTarget)
+public class FileInfo
+{
+    public void CreateAsSymbolicLink(string pathToTarget);
+    public FileInfo? GetTargetInfo(bool returnFinalTarget = true); 
+}
+
+public class DirectoryInfo
+{
+    public void CreateAsSymbolicLink(string pathToTarget);
+    public DirectoryInfo? GetTargetInfo(bool returnFinalTarget = true); 
+}
 ```
-
-This method should be declared in the abstract class `FileSystemInfo`, so that the deriving classes `FileInfo` and `DirectoryInfo` implement their specific versions.
-
-We decided to take this approach for the following reasons:
-
-- We need to support the most restrictive OS (Windows), without affecting the least restrictive (Unix): Windows has two types of symbolic links (files and directories), and Unix only one type (independent of what it is pointing to).
-- Since C# is a strongly typed language, it makes sense to know in advance if a symbolic link we will create, will point to either a file or a directory.
-- The `FileInfo` and `DirectoryInfo` constructors can be called passing a path to a file or folder that does not yet exist, but we would be able to create a symbolic link to an inexistent file/folder and the creation should succeed (even if the symlink is invalid).
-- The parameter name clearly indicates we need to pass the path of the existing file or folder the symbolic link should point to.
-- The method does not need to return anything, which is analogous to [`DirectoryInfo.Create`](https://github.com/dotnet/runtime/blob/01b7e73cd378145264a7cb7a09365b41ed42b240/src/libraries/System.IO.FileSystem/src/System/IO/DirectoryInfo.cs#L93) and [`FileInfo.Create`](https://github.com/dotnet/runtime/blob/01b7e73cd378145264a7cb7a09365b41ed42b240/src/libraries/System.IO.FileSystem/src/System/IO/FileInfo.cs#L102).
-
-### Retrieving the target
-
-```cs
-FileSystemInfo? GetTargetInfo(bool returnFinalTarget = true); // Final target should be default
-```
-
-Similarly to the creation method, we think this method should live in the abstract class `FileSystemInfo`, and the deriving classes `FileInfo` and `DirectoryInfo` would implement their specific versions.
-
-We decided to take this approach for the following reasons:
-
-- One of the main requests in this discussion is to give the user the ability to retrieve the symbolic link target.
-- Having a boolean parameter `returnFinalTarget` ensures the user can decide if they want to retrieve the object the current symbolic link is pointing to, or in the case of a chain of symbolic links, the final target of the chain. We think the latter is the most common scenario, which is why the default value of the parameter is `true`.
-- The method returns a nullable `FileSystemInfo` because only `FileInfo` and `DirectoryInfo` instances wrapping a symbolic link should return a valid instance.
-- The user can verify if the current `FileSystemInfo` instance is a symbolic link, by calling `FileSystemInfo.Attributes.HasFlag(FileAttributes.ReparsePoint)`.
-- Having the method in the abstract class will make sure enumeration with `FileSystemEnumerable` works with the public method `FileSystemEntry.ToFileSystemInfo()`, which would normally be used in the `FindTransform` method (see use case below).
-- This method would resolve the desired target by making the actual disk calls that verify if the file exists, or if there are cycles in the symbolic links.
 
 ### Future expansions
 
@@ -234,7 +216,7 @@ foreach (FileSystemInfo info in enumerable)
 
 ---
 
-## Alternative/additional designs
+## [Future] Optional additional design
 
 As initially proposed in this discussion, we also made sure to consider the expansion of the existing `File` and `Directory` static classes, with some differences.
 
@@ -251,33 +233,7 @@ public static class Directory
 
     static DirectoryInfo CreateSymbolicLink(string path, string pathToTarget);
 }
-
-public abstract class FileSystemInfo
-{
-    // Same API described in the main proposal
-    FileSystemInfo? GetTargetInfo(bool returnFinalTarget = true);
-}
 ```
-
-## Descriptions
-
-### Creating a file symbolic link
-
-```cs
-static FileInfo CreateSymbolicLink(string path, string pathToTarget);
-```
-
-The structure is similar to other [creation methods](https://github.com/dotnet/runtime/blob/01b7e73cd378145264a7cb7a09365b41ed42b240/src/libraries/System.IO.FileSystem/src/System/IO/File.cs) in the `File` class.
-
-Just like in the main proposal, we need to make sure to properly support the most restrictive OS, Windows, which differentiates between a file symlink and a directory symlink.
-
-### Creating a directory symbolic link
-
-```cs
-static DirectoryInfo CreateSymbolicLink(string path, string pathToTarget);
-```
-
-Similar to the previous case, and has parity to the [creation methods](https://github.com/dotnet/runtime/blob/01b7e73cd378145264a7cb7a09365b41ed42b240/src/libraries/System.IO.FileSystem/src/System/IO/Directory.cs) in the static `Directory` class.
 
 ### Future expansions
 
@@ -359,10 +315,3 @@ FileSystemInfo target2b = link2b.GetTargetInfo(returnFinalTarget: false);
 Console.WriteLine(target2b.FullPath); // /path/link1
 ```
 </details>
-
-
-
-
-
-
-

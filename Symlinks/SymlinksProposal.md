@@ -1,31 +1,75 @@
-<details>
+# Summary
 
-<summary>Proposal</summary>
+The ability to interact with symbolic links in .NET is currently limited to determining that a file has the `ReparsePoint` attribute, but we do not yet offer APIs for creating symbolic links, or for accessing the linked file or directory.
+
+# Proposed APIs
 
 ```cs
 public abstract class FileSystemInfo
 {
     public void CreateAsSymbolicLink(string pathToTarget);
-    FileSystemInfo? GetTargetInfo(bool returnFinalTarget = true);
+    FileSystemInfo? GetTargetInfo(bool returnFinalTarget = true); // Final target should be default
 }
-
-//// Future additional APIs:
-// public class DirectoryInfo
-// {
-//     public void CreateJunction(string targetPath);
-// }
-
-// public class FileInfo
-// {
-//     public void CreateHardLink(string targetPath);
-// }
 ```
 
-</details>
+## Descriptions
+
+### Creating a symbolic link
+
+```cs
+void CreateAsSymbolicLink(string pathToTarget)
+```
+
+This method should be declared in the abstract class `FileSystemInfo`, so that the deriving classes `FileInfo` and `DirectoryInfo` implement their specific versions.
+
+We decided to take this approach for the following reasons:
+
+- We need to support the most restrictive OS (Windows), without affecting the least restrictive (Unix): Windows has two types of symbolic links (files and directories), and Unix only one type (independent of what it is pointing to).
+- Since C# is a strongly typed language, it makes sense to know in advance if a symbolic link we will create, will point to either a file or a directory.
+- The `FileInfo` and `DirectoryInfo` constructors can be called passing a path to a file or folder that does not yet exist, but we would be able to create a symbolic link to an inexistent file/folder and the creation should succeed (even if the symlink is invalid).
+- The parameter name clearly indicates we need to pass the path of the existing file or folder the symbolic link should point to.
+- The method does not need to return anything, which is analogous to [`DirectoryInfo.Create`](https://github.com/dotnet/runtime/blob/01b7e73cd378145264a7cb7a09365b41ed42b240/src/libraries/System.IO.FileSystem/src/System/IO/DirectoryInfo.cs#L93) and [`FileInfo.Create`](https://github.com/dotnet/runtime/blob/01b7e73cd378145264a7cb7a09365b41ed42b240/src/libraries/System.IO.FileSystem/src/System/IO/FileInfo.cs#L102).
+
+### Retrieving the target
+
+```cs
+FileSystemInfo? GetTargetInfo(bool returnFinalTarget = true); // Final target should be default
+```
+
+Similarly to the creation method, we think this method should live in the abstract class `FileSystemInfo`, and the deriving classes `FileInfo` and `DirectoryInfo` would implement their specific versions.
+
+We decided to take this approach for the following reasons:
+
+- One of the main requests in this discussion is to give the user the ability to retrieve the symbolic link target.
+- Having a boolean parameter `returnFinalTarget` ensures the user can decide if they want to retrieve the object the current symbolic link is pointing to, or in the case of a chain of symbolic links, the final target of the chain. We think the latter is the most common scenario, which is why the default value of the parameter is `true`.
+- The method returns a nullable `FileSystemInfo` because only `FileInfo` and `DirectoryInfo` instances wrapping a symbolic link should return a valid instance.
+- The user can verify if the current `FileSystemInfo` instance is a symbolic link, by calling `FileSystemInfo.Attributes.HasFlag(FileAttributes.ReparsePoint)`.
+- Having the method in the abstract class will make sure enumeration with `FileSystemEnumerable` works with the public method `FileSystemEntry.ToFileSystemInfo()`, which would normally be used in the `FindTransform` method (see use case below).
+- This method would resolve the desired target by making the actual disk calls that verify if the file exists, or if there are cycles in the symbolic links.
+
+### Future expansions
+
+Although they are outside of the scope of this API proposal, we wanted to make sure we could easily expand `FileSystemInfo` to support the creation of junctions and hard links:
+
+```cs
+public class DirectoryInfo
+{
+    // Can reuse `GetTargetInfo` to retrieve the junction target
+    public void CreateJunction(string pathToTarget);
+}
+
+public class FileInfo
+{
+    public void CreateHardLink(string pathToTarget);
+}
+```
+
+
+## Usage cases
 
 <details>
 
-<summary>Usage cases</summary>
+<summary>Expand me</summary>
 
 ```cs
 /////////////////////////
@@ -188,57 +232,77 @@ foreach (FileSystemInfo info in enumerable)
 
 </details>
 
-<details>
+---
 
-<summary>Alternative design</summary>
+## Alternative/additional designs
+
+As initially proposed in this discussion, we also made sure to consider the expansion of the existing `File` and `Directory` static classes, with some differences.
+
+These additional APIs could be considered alternative or additional to the proposed above.
 
 ```cs
-
-// New
-public enum FileType
-{
-    Regular, // Alt-name: Hard-link. Used exclusively with FileInfo.
-    SymbolicLink,
-    Directory, // Used exclusively with a DirectoryInfo.
-
-    //// Future enum values:
-
-    // Junction, // Windows only
-    // Pipe, // Unix
-    // Block, // Unix
-    // Character, // Unix
-    // Socket, // Unix
-}
-
-public abstract class FileSystemInfo
-{
-    FileType FileType { get; }
-    FileSystemInfo? GetTargetInfo(bool returnFinalTarget = true); // Final target should be default
-}
-
 public static class File
 {
-    static FileInfo CreateSymbolicLink(string path, string targetPath);
-
-    //// Future additional APIs:
-    // static FileInfo CreateHardLink(string path, string targetPath);
+    static FileInfo CreateSymbolicLink(string path, string pathToTarget);
 }
 
 public static class Directory
 {
 
-    static DirectoryInfo CreateSymbolicLink(string path, string targetPath);
+    static DirectoryInfo CreateSymbolicLink(string path, string pathToTarget);
+}
 
-    //// Future additional APIs:
-    // static DirectoryInfo CreateJunction(string path, string targetPath);
+public abstract class FileSystemInfo
+{
+    // Same API described in the main proposal
+    FileSystemInfo? GetTargetInfo(bool returnFinalTarget = true);
 }
 ```
 
-</details>
+## Descriptions
+
+### Creating a file symbolic link
+
+```cs
+static FileInfo CreateSymbolicLink(string path, string pathToTarget);
+```
+
+The structure is similar to other [creation methods](https://github.com/dotnet/runtime/blob/01b7e73cd378145264a7cb7a09365b41ed42b240/src/libraries/System.IO.FileSystem/src/System/IO/File.cs) in the `File` class.
+
+Just like in the main proposal, we need to make sure to properly support the most restrictive OS, Windows, which differentiates between a file symlink and a directory symlink.
+
+### Creating a directory symbolic link
+
+```cs
+static DirectoryInfo CreateSymbolicLink(string path, string pathToTarget);
+```
+
+Similar to the previous case, and has parity to the [creation methods](https://github.com/dotnet/runtime/blob/01b7e73cd378145264a7cb7a09365b41ed42b240/src/libraries/System.IO.FileSystem/src/System/IO/Directory.cs) in the static `Directory` class.
+
+### Future expansions
+
+Similarly to the main proposal, we made sure to keep in mind the potential future addition of junction and hard link creation support.
+
+```cs
+public static class File
+{
+    // Future
+    static FileInfo CreateHardLink(string path, string pathToTarget);
+}
+
+public static class Directory
+{
+    // Future
+    // The user could consume `FileSystemInfo.GetTargetInfo` to retrieve the junction target
+    static DirectoryInfo CreateJunction(string path, string pathToTarget);
+}
+```
+
+## Alternative design usage cases
 
 <details>
 
-<summary>Alternative design usage cases</summary>
+<summary>Expand me</summary>
 
 ```cs
 /////////////////////////
@@ -297,36 +361,8 @@ Console.WriteLine(target2b.FullPath); // /path/link1
 </details>
 
 
----
-
-Need to create new APIs that allow creating symbolic links, but can be easily expanded to create hard links, junctions, etc.
-
-Need to add support for enumeration filtering of symbolic links. Ideally, only expand the FileSystemEnumerable APIs.
-
-On Windows, there's differentiation between a link to a dir and a link to a file. On Unix, there isn't.
-
-The APIs must create a symbolic link and represent it with the *Info instance, and have another API that provides a reference to the target.
-
-Need to support following the symlinks up to its final target, when they are chained, and make sure no cycles are found.
-
-Windows types of links
-
-https://cects.com/overview-to-understanding-hard-links-junction-points-and-symbolic-links-in-windows/
-
-- Hard link: a link to a local file/directory handle. Deleting the hard link deletes the target. If target is moved, hard link stays valid.
--  Junction: a legacy symbolic link that targets the absolute path of a local directory. Deleting the junction does not delete the directory. If target is moved, junction turns invalid. Drag and dropping the junction to another location, moves the actual directory to that location, without deleting the original directory (but will now be empty).
-- Symbolic link: a link that targets the relative or absolute path of a local or remote file or directory. Deleting the symbolic link does not delete the target. Moving the target turns the symbolic link invalid.
-- App execution aliases: a new special kind of symbolic link with a custom reparse point that allows targeting a Windows Store app via a "fake" executable that weighs 0 bytes, which is linked to the real file.
-        https://www.tiraniddo.dev/2019/09/overview-of-windows-execution-aliases.html
-        https://stackoverflow.com/questions/62474046/how-do-i-find-the-target-of-a-windows-app-execution-alias-in-c-win32-api
 
 
-Windows links to folders:
-- Junction
-- Symbolic link
 
-Windows links to files:
-- Hard link
-- Symbolic link
-- App execution aliases
+
 

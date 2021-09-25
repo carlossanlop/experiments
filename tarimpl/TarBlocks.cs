@@ -1,6 +1,5 @@
-// Wiki: https://en.wikipedia.org/wiki/Tar_(computing)
-// Spec: https://www.fileformat.info/format/tar/corion.htm
-// Excellent explanation: https://github.com/Keruspe/tar-parser.rs/blob/master/tar.specs
+// Wiki: https://en.wikipedia.org/wiki/Tar_(computing)https://man.netbsd.org/tar.5
+// All Specs: https://man.netbsd.org/tar.5
 
 using System.IO;
 
@@ -8,22 +7,17 @@ namespace tarimpl
 {
     internal struct TarFileHeader
     {
-        // Defines the type of file.
-        internal enum EntryType
+        internal struct TypeFlags
         {
-            // POSIX entry types.
-
-            OldNormal = '\0',   // LF_OLDNORMAL - Normal disk file, Unix compatible
-            Normal = '0',       // LF_NORMAL - Normal disk file
-            Link = '1',         // LF_LINK - Link to previously dumped file
-            SymbolicLink = '2', // LF_SYMLINK - Symbolic link
-            Character = '3',    // LF_CHR - Character special file
-            Block = '4',        // LF_BLK - Block special file
-            Directory = '5',    // LF_DIR - Directory
-            Fifo = '6',         // LF_FIFO - FIFO special file
-            Contiguous = '7',   // LF_CONTIG - Contiguous file
-
-            // Any other unrecognized value should be treated as a regular file.
+            internal const char OldNormal = '\0';   // LF_OLDNORMAL - Normal disk file, Unix compatible
+            internal const char Normal = '0';       // LF_NORMAL - Normal disk file
+            internal const char Link = '1';         // LF_LINK - Link to previously dumped file
+            internal const char SymbolicLink = '2'; // LF_SYMLINK - Symbolic link
+            internal const char Character = '3';    // LF_CHR - Character special file
+            internal const char Block = '4';        // LF_BLK - Block special file
+            internal const char Directory = '5';    // LF_DIR - Directory
+            internal const char Fifo = '6';         // LF_FIFO - FIFO special file
+            internal const char Contiguous = '7';   // LF_CONTIG - Contiguous file
         }
 
         internal struct FilePermissions
@@ -39,9 +33,14 @@ namespace tarimpl
             internal const ushort OtherRead = 0x4; // TOREAD - Other read
             internal const ushort OtherWrite = 0x2; // TOWRITE - Other write
             internal const ushort OtherExecute = 0x1; // TOEXEC - Other execute
+
+            // Bits used in the mode field.
+            internal const ushort SetUid = 0x800; // Set UID on execution (octal 4000)
+            internal const ushort SetGid = 0x400; // Set GID on execution (octal 2000)
+            internal const ushort SaveText = 0x200; // Save text (sticky bit) (octal 1000)
         }
 
-        internal struct HeaderFieldSizes
+        internal struct FieldSizes
         {
             internal const ushort NameSize = 100;   // NAMSIZ
             internal const ushort Mode = 8;
@@ -58,19 +57,8 @@ namespace tarimpl
             internal const ushort DevMajor = 8;
             internal const ushort DevMinor = 8;
             internal const ushort Prefix = 155;
+            internal const ushort Pad = 12;
         }
-
-        internal const ushort RecordSize = 512; // RECORDSIZE
-
-        // The checksum field is filled with this while the checksum is computed.
-        internal readonly char[] CheckSumBlanks = new[] { ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' }; // CHKBLANKS
-        // The magic field is filled with this if uname and gname are valid.
-        internal readonly char[] UstarMagicField = new[] { 'u', 's', 't', 'a', 'r', ' ' }; // TMAGIC
-
-        // Bits used in the mode field.
-        internal const ushort SetUid = 0x800; // Set UID on execution (octal 4000)
-        internal const ushort SetGid = 0x400; // Set GID on execution (octal 2000)
-        internal const ushort SaveText = 0x200; // Save text (sticky bit) (octal 1000)
 
         // All the header fields use 8-bit ASCII characters.
         // Number fields (mode, uid, gid, size, mtime, checksum, linkflag) use octal numbers in ASCII.
@@ -115,21 +103,29 @@ namespace tarimpl
         //  So, if 'Prefix' is not empty, to obtain the regular pathname, we append 'Prefix' + '/' + 'Name'.
         internal byte[] _prefix;
 
+        internal byte[] _pad;
+
         internal static bool TryReadBlock(BinaryReader reader, out TarFileHeader header)
         {
             header = default;
 
-            header._name = reader.ReadBytes(HeaderFieldSizes.NameSize);
-            header._mode = reader.ReadBytes(HeaderFieldSizes.Mode);
-            header._uid = reader.ReadBytes(HeaderFieldSizes.Uid);
-            header._gid = reader.ReadBytes(HeaderFieldSizes.Gid);
-            header._size = reader.ReadBytes(HeaderFieldSizes.Size);
-            header._mtime = reader.ReadBytes(HeaderFieldSizes.MTime);
-            header._checksum = reader.ReadBytes(HeaderFieldSizes.CheckSum);
+            header._name = reader.ReadBytes(FieldSizes.NameSize);
+            header._mode = reader.ReadBytes(FieldSizes.Mode);
+            header._uid = reader.ReadBytes(FieldSizes.Uid);
+            header._gid = reader.ReadBytes(FieldSizes.Gid);
+            header._size = reader.ReadBytes(FieldSizes.Size);
+            header._mtime = reader.ReadBytes(FieldSizes.MTime);
+            header._checksum = reader.ReadBytes(FieldSizes.CheckSum);
             header._typeflag = reader.ReadByte();
-            header._linkname = reader.ReadBytes(HeaderFieldSizes.LinkName);
-            header._magic = reader.ReadBytes(HeaderFieldSizes.Magic);
-            header._version = reader.ReadBytes(HeaderFieldSizes.Version);
+            header._linkname = reader.ReadBytes(FieldSizes.LinkName);
+            header._magic = reader.ReadBytes(FieldSizes.Magic);
+            header._version = reader.ReadBytes(FieldSizes.Version);
+            header._uname = reader.ReadBytes(FieldSizes.UName);
+            header._gname = reader.ReadBytes(FieldSizes.GName);
+            header._devmajor = reader.ReadBytes(FieldSizes.DevMajor);
+            header._devminor = reader.ReadBytes(FieldSizes.DevMinor);
+            header._prefix = reader.ReadBytes(FieldSizes.Prefix);
+            header._pad = reader.ReadBytes(FieldSizes.Pad);
 
             return true;
         }

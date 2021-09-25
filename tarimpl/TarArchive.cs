@@ -54,12 +54,12 @@ namespace tarimpl
 
             switch (_options.Mode)
             {
-                case TarMode.Create:
-                    if (!stream.CanWrite)
-                    {
-                        throw new ArgumentException("Create");
-                    }
-                    break;
+                //case TarMode.Create:
+                //    if (!stream.CanWrite)
+                //    {
+                //        throw new ArgumentException("Create");
+                //    }
+                //    break;
 
                 case TarMode.Read:
                     if (!stream.CanRead)
@@ -68,21 +68,21 @@ namespace tarimpl
                     }
                     break;
 
-                case TarMode.Update:
-                    if (!stream.CanRead || !stream.CanWrite || !stream.CanSeek)
-                    {
-                        throw new ArgumentException("Update");
-                    }
-                    break;
+                //case TarMode.Update:
+                //    if (!stream.CanRead || !stream.CanWrite || !stream.CanSeek)
+                //    {
+                //        throw new ArgumentException("Update");
+                //    }
+                //    break;
 
                 default:
                     throw new ArgumentOutOfRangeException("Mode");
             }
 
-            if (_options.Mode != TarMode.Create)
-            {
-                _archiveReader = new BinaryReader(_archiveStream);
-            }
+            //if (_options.Mode != TarMode.Create)
+            //{
+            _archiveReader = new BinaryReader(_archiveStream);
+            //}
 
             _entries = new List<TarArchiveEntry>();
             _entriesCollection = new ReadOnlyCollection<TarArchiveEntry>(_entries);
@@ -94,10 +94,10 @@ namespace tarimpl
         {
             get
             {
-                if (_options.Mode == TarMode.Create)
-                {
-                    throw new NotSupportedException("Entries Create");
-                }
+                //if (_options.Mode == TarMode.Create)
+                //{
+                //    throw new NotSupportedException("Entries Create");
+                //}
 
                 ThrowIfDisposed();
                 EnsureArchiveIsRead();
@@ -108,19 +108,14 @@ namespace tarimpl
 
         public TarOptions Options => _options;
 
-        public TarArchiveEntry CreateEntry(string entryName)
-        {
-            return null;
-        }
+        public TarArchiveEntry CreateEntry(string entryName) => throw null!;
 
         public void Dispose()
         {
-
         }
 
         protected virtual void Dispose(bool disposing)
         {
-
         }
 
         public TarArchiveEntry? GetEntry(string entryName)
@@ -128,7 +123,13 @@ namespace tarimpl
             return null;
         }
 
-        private void ThrowIfDisposed()
+        private void AddEntry(TarArchiveEntry entry) => _entries.Add(entry);
+
+        internal void RemoveEntry(TarArchiveEntry entry)
+        {
+        }
+
+        internal void ThrowIfDisposed()
         {
             if (_isDisposed)
             {
@@ -147,23 +148,12 @@ namespace tarimpl
 
         private void ReadArchive()
         {
-            _archiveStream.Seek(0, SeekOrigin.Begin);
-
-            long numberOfEntries = 0;
-
             Debug.Assert(_archiveReader != null);
-
-            TarFileHeader currentHeader;
-            while (TarFileHeader.TryReadBlock(_archiveReader, out currentHeader))
+            _archiveStream.Seek(0, SeekOrigin.Begin);
+            while (TarFileHeader.TryReadBlock(_archiveReader, out TarFileHeader currentHeader))
             {
                 AddEntry(new TarArchiveEntry(this, currentHeader));
-                numberOfEntries++;
             }
-        }
-
-        private void AddEntry(TarArchiveEntry entry)
-        {
-            _entries.Add(entry);
         }
     }
 }

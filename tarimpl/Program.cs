@@ -21,38 +21,38 @@ namespace tarimpl
             }
         }
 
-        private static TarArchive CreateArchiveAddEntries(Stream s)
-        {
-            Dictionary<string, string> files = new()
-            {
-                { "file1.txt", "AAA" },
-                { "dir/file2.txt", "BBB" },
-                { "dir/subdir/file3.txt", "CCC" }
-            };
+        //private static TarArchive CreateArchiveAddEntries(Stream s)
+        //{
+        //    Dictionary<string, string> files = new()
+        //    {
+        //        { "file1.txt", "AAA" },
+        //        { "dir/file2.txt", "BBB" },
+        //        { "dir/subdir/file3.txt", "CCC" }
+        //    };
 
-            TarOptions options = new() { Mode = TarMode.Create };
-            TarArchive archive = new TarArchive(s, options);
+        //    TarOptions options = new() { Mode = TarMode.Create };
+        //    TarArchive archive = new TarArchive(s, options);
 
-            foreach ((string fileName, string fileContents) in files)
-            {
-                TarArchiveEntry entry = archive.CreateEntry(fileName);
-                using StreamWriter writer = new StreamWriter(entry.Open());
-                writer.Write(fileContents);
-            }
+        //    foreach ((string fileName, string fileContents) in files)
+        //    {
+        //        TarArchiveEntry entry = archive.CreateEntry(fileName);
+        //        using StreamWriter writer = new StreamWriter(entry.Open());
+        //        writer.Write(fileContents);
+        //    }
 
-            return archive;
-        }
+        //    return archive;
+        //}
 
 
-        private static void UpdateByDeletion(TarArchive archive)
-        {
-            foreach (var entry in archive.Entries)
-            {
-                if (entry.Name == "file1.txt") // First item
-                {
-                    entry.Delete();
-                }
-            }
-        }
+        //private static void UpdateByDeletion(TarArchive archive)
+        //{
+        //    foreach (var entry in archive.Entries)
+        //    {
+        //        if (entry.FullName == "file1.txt") // First item
+        //        {
+        //            entry.Delete();
+        //        }
+        //    }
+        //}
     }
 }

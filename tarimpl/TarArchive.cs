@@ -25,13 +25,13 @@ namespace tarimpl
     */
     public class TarArchive : IDisposable
     {
-        TarOptions _options;
-        MemoryMappedFile _mmf;
-        MemoryMappedFileAccess _mmfAccess;
-        List<TarArchiveEntry> _entries;
-        ReadOnlyCollection<TarArchiveEntry> _entriesCollection;
-        bool _isDisposed;
-        bool _areEntriesRead;
+        private TarOptions _options;
+        internal MemoryMappedFile _mmf;
+        private MemoryMappedViewStream _stream;
+        private List<TarArchiveEntry> _entries;
+        private ReadOnlyCollection<TarArchiveEntry> _entriesCollection;
+        private bool _isDisposed;
+        private bool _areEntriesRead;
 
         public TarArchive(string path, TarOptions? options)
         {
@@ -42,19 +42,23 @@ namespace tarimpl
 
             _options = options ?? new TarOptions();
 
-            FileMode fileMode;
             switch (_options.Mode)
             {
                 case TarMode.Read:
-                    fileMode = FileMode.Open;
-                    _mmfAccess = MemoryMappedFileAccess.Read;
+                case TarMode.Update:
+                    _mmf = MemoryMappedFile.CreateFromFile(path, FileMode.Open);
+                    break;
+
+                case TarMode.Create:
+                    // TODO: Is the capacity going to preallocate that memory?
+                    _mmf = MemoryMappedFile.CreateNew(path, long.MaxValue, MemoryMappedFileAccess.CopyOnWrite);
                     break;
 
                 default:
-                    throw new ArgumentOutOfRangeException("Mode");
+                    throw new InvalidOperationException("Mode");
             }
 
-            _mmf = MemoryMappedFile.CreateFromFile(path, fileMode, null, 0, _mmfAccess);
+            _stream = _mmf.CreateViewStream();
             _entries = new List<TarArchiveEntry>();
             _entriesCollection = new ReadOnlyCollection<TarArchiveEntry>(_entries);
             _isDisposed = false;
@@ -76,10 +80,6 @@ namespace tarimpl
 
         public TarArchiveEntry CreateEntry(string entryName) => throw null!;
 
-        internal MemoryMappedFile MemoryFile => _mmf;
-
-        internal MemoryMappedFileAccess MemoryFileAccess => _mmfAccess;
-
         public void Dispose() => Dispose(true);
 
         protected virtual void Dispose(bool disposing)
@@ -88,9 +88,9 @@ namespace tarimpl
             {
                 foreach (var entry in _entries)
                 {
-                    entry.Stream?.Dispose();
+                    entry._stream?.Dispose();
                 }
-                _mmf.Dispose();
+                _stream.Dispose();
                 GC.SuppressFinalize(this);
             }
         }
@@ -127,16 +127,23 @@ namespace tarimpl
         private void ReadArchive()
         {
             long startHeader = 0;
-            long endHeader = startHeader + TarFileHeader.TarFileHeaderSize;
-            using var stream = _mmf.CreateViewStream(startHeader, endHeader, _mmfAccess);
-            var reader = new BinaryReader(stream);
-            while (TarFileHeader.TryReadBlock(ref reader, out TarFileHeader currentHeader))
+            long endHeader = startHeader + TarHeader.TarFileHeaderSize;
+            using var reader = new BinaryReader(_stream);
+
+            while (startHeader < _stream.Length && endHeader < _stream.Length)
             {
-                var entry = new TarArchiveEntry(this, currentHeader, endHeader + 1);
+                if (!TarHeader.TryReadBlock(reader, out TarHeader header, out long skippedBytes))
+                {
+                    break;
+                }
+
+                long dataStart = endHeader + 1;
+                var entry = new TarArchiveEntry(this, header, dataStart);
                 AddEntry(entry);
-                startHeader += TarFileHeader.TarFileHeaderSize + entry.Length + 1; // Move past content of entry file
+                // skippedBytes contains the entry file size + nulls 
+                startHeader += TarHeader.TarFileHeaderSize + skippedBytes + 1;
+                endHeader = startHeader + TarHeader.TarFileHeaderSize;
             }
-            reader.Dispose();
         }
     }
 }

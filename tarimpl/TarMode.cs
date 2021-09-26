@@ -2,8 +2,8 @@
 {
     public enum TarMode
     {
-        //Create,
+        Create,
         Read,
-        //Update
+        Update
     }
 }

@@ -18,34 +18,36 @@ namespace tarimpl
             using TarArchive archive = new TarArchive(@"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\brotli.tar", options);
             foreach (TarArchiveEntry entry in archive.Entries)
             {
-                Console.WriteLine(entry.FullName);
-                byte[] buffer = new byte[20];
-                entry.Stream!.Read(buffer);
-                Console.WriteLine(Encoding.UTF8.GetString(buffer));
+                Console.WriteLine($"{entry.Length}    {entry.FullName}");
             }
         }
 
-        //private static TarArchive CreateArchiveAddEntries(Stream s)
-        //{
-        //    Dictionary<string, string> files = new()
-        //    {
-        //        { "file1.txt", "AAA" },
-        //        { "dir/file2.txt", "BBB" },
-        //        { "dir/subdir/file3.txt", "CCC" }
-        //    };
+        private static void CreateArchiveAddEntries()
+        {
+            var files = new Dictionary<string, string>()
+            {
+                { "file1.txt", "AAA" },
+                { "dir/file2.txt", "BBB" },
+                { "dir/subdir/file3.txt", "CCC" }
+            };
 
-        //    TarOptions options = new() { Mode = TarMode.Create };
-        //    TarArchive archive = new TarArchive(s, options);
+            string path = @"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\brotli.tar";
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
 
-        //    foreach ((string fileName, string fileContents) in files)
-        //    {
-        //        TarArchiveEntry entry = archive.CreateEntry(fileName);
-        //        using StreamWriter writer = new StreamWriter(entry.Open());
-        //        writer.Write(fileContents);
-        //    }
-
-        //    return archive;
-        //}
+            var options = new TarOptions() { Mode = TarMode.Create };
+            using (var archive = new TarArchive(path, options))
+            {
+                foreach ((string fileName, string contents) in files)
+                {
+                    TarArchiveEntry entry = archive.CreateEntry(fileName);
+                    using StreamWriter writer = new StreamWriter(entry.Open());
+                    writer.Write(contents);
+                }
+            }
+        }
 
 
         //private static void UpdateByDeletion(TarArchive archive)

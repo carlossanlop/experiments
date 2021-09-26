@@ -36,96 +36,43 @@ namespace tarimpl
     public class TarArchiveEntry
     {
         private TarArchive? _archive;
+        private TarHeader _header;
         private long _dataStart;
-        private string _fullName;
-        private DateTime _lastWriteTime;
-        private MemoryMappedViewStream? _stream;
+        internal MemoryMappedViewStream? _stream;
 
-        private string _name;
-        private int _mode;
-        private int _uid;
-        private int _gid;
-        private long _size;
-        private long _mtime;
-        private int _checksum; // "        private " is the default value when checksum is computed
-        private byte _typeflag;
-        private string _linkname;
-        private string _magic;
-        private string _version;
-        private string _uname;
-        private string _gname;
-        private int _devmajor;
-        private int _devminor;
-        private string _prefix;
-
-        internal TarArchiveEntry(TarArchive archive, TarFileHeader header, long dataStart)
+        internal TarArchiveEntry(TarArchive archive, TarHeader header, long dataStart)
         {
             _archive = archive;
+            _header = header;
             _dataStart = dataStart;
 
-            _name = Encoding.ASCII.GetString(header._name).TrimEnd('\0');
-            _mode = GetInt32FromOctalString(header._mode);
-            _uid = GetInt32FromOctalString(header._uid);
-            _gid = GetInt32FromOctalString(header._gid);
-            _size = GetInt32FromOctalString(header._size);
-            _mtime = GetInt32FromOctalString(header._mtime);
-            _checksum = GetInt32FromOctalString(header._checksum);
-            _typeflag = header._typeflag;
-            _linkname = Encoding.ASCII.GetString(header._linkname).TrimEnd('\0');
-            _magic = Encoding.ASCII.GetString(header._magic);
-            _version = Encoding.ASCII.GetString(header._version);
-            _uname = Encoding.ASCII.GetString(header._uname).TrimEnd('\0');
-            _gname = Encoding.ASCII.GetString(header._gname).TrimEnd('\0');
-
-            if (_magic.Equals("ustar ") &&
-                (string.IsNullOrEmpty(_uname) ||
-                 string.IsNullOrEmpty(_gname) ||
-                 (!_version.Equals("\0\0") && !_version.Equals(" \0"))))
+            // 0 size means directory
+            if (_header._size > 0)
             {
-                throw new InvalidDataException("uname or gname empty, or version not 00, when magic is ustar");
+                _stream = _archive._mmf.CreateViewStream(dataStart, _header._size);
             }
-
-            if (_typeflag.Equals('3') || _typeflag.Equals('4'))
-            {
-                _devmajor = Convert.ToInt32(Encoding.ASCII.GetString(header._devmajor));
-                _devminor = Convert.ToInt32(Encoding.ASCII.GetString(header._devminor));
-            }
-            _prefix = Encoding.ASCII.GetString(header._prefix).TrimEnd('\0');
-
-            if (string.IsNullOrEmpty(_prefix))
-            {
-                _fullName = _name;
-            }
-            else
-            {
-                _fullName = Path.Join(_prefix, _name);
-            }
-
-            _lastWriteTime = DateTime.UnixEpoch.AddSeconds(_mtime);
         }
 
-        public string FullName => _fullName;
+        public string FullName => _header._fullName;
 
-        public string LinkName => _linkname;
+        public string LinkName => _header._linkname;
 
-        public int Mode => _mode;
-        public int Uid => _uid;
-        public int Gid => _gid;
+        public int Mode => _header._mode;
+        public int Uid => _header._uid;
+        public int Gid => _header._gid;
 
-        public string UName => _uname;
-        public string GName => _gname;
+        public string UName => _header._uname;
+        public string GName => _header._gname;
 
-        public int DevMajor => _devmajor;
-        public int DevMinor => _devminor;
+        public int DevMajor => _header._devmajor;
+        public int DevMinor => _header._devminor;
 
         // File size
-        public long Length => _size;
+        public long Length => _header._size;
 
-        public DateTime LastWriteTime => _lastWriteTime;
+        public DateTime LastWriteTime => _header._lastWriteTime;
 
-        public int CheckSum => _checksum;
-
-        internal MemoryMappedViewStream? Stream => _stream;
+        public int CheckSum => _header._checksum;
 
         public void Delete()
         {
@@ -138,10 +85,9 @@ namespace tarimpl
             _archive = null!;
         }
 
-        public Stream Open()
+        public Stream? Open()
         {
             ThrowIfInvalidArchive();
-            _stream = _archive!.MemoryFile.CreateViewStream(_dataStart, Length, _archive.MemoryFileAccess);
             return _stream;
         }
 
@@ -155,8 +101,5 @@ namespace tarimpl
         }
 
         public override string ToString() => FullName;
-
-        private static int GetInt32FromOctalString(byte[] field) =>
-            Convert.ToInt32(Encoding.ASCII.GetString(field), 8);
     }
 }

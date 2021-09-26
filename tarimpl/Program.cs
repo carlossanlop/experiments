@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 namespace tarimpl
 {
@@ -8,16 +9,19 @@ namespace tarimpl
     {
         public static void Main()
         {
+            ReadEntries();
         }
 
         private static void ReadEntries()
         {
-            using FileStream fs = File.Open("file.tar", FileMode.Open);
             TarOptions options = new() { Mode = TarMode.Read };
-            using TarArchive archive = new TarArchive(fs, options);
+            using TarArchive archive = new TarArchive(@"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\brotli.tar", options);
             foreach (TarArchiveEntry entry in archive.Entries)
             {
                 Console.WriteLine(entry.FullName);
+                byte[] buffer = new byte[20];
+                entry.Stream!.Read(buffer);
+                Console.WriteLine(Encoding.UTF8.GetString(buffer));
             }
         }
 

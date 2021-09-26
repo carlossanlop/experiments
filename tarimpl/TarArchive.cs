@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 
 namespace tarimpl
 {
@@ -25,65 +26,35 @@ namespace tarimpl
     public class TarArchive : IDisposable
     {
         TarOptions _options;
-        Stream _archiveStream;
-        BinaryReader? _archiveReader;
+        MemoryMappedFile _mmf;
+        MemoryMappedFileAccess _mmfAccess;
         List<TarArchiveEntry> _entries;
         ReadOnlyCollection<TarArchiveEntry> _entriesCollection;
         bool _isDisposed;
         bool _areEntriesRead;
 
-        public TarArchive(Stream stream, TarOptions? options)
+        public TarArchive(string path, TarOptions? options)
         {
-            if (stream == null)
+            if (string.IsNullOrEmpty(path))
             {
-                throw new ArgumentNullException(nameof(stream));
+                throw new ArgumentNullException(nameof(path));
             }
 
             _options = options ?? new TarOptions();
 
-            if (!stream.CanSeek)
-            {
-                _archiveStream = new MemoryStream();
-                stream.CopyTo(_archiveStream);
-                _archiveStream.Seek(0, SeekOrigin.Begin);
-            }
-            else
-            {
-                _archiveStream = stream;
-            }
-
+            FileMode fileMode;
             switch (_options.Mode)
             {
-                //case TarMode.Create:
-                //    if (!stream.CanWrite)
-                //    {
-                //        throw new ArgumentException("Create");
-                //    }
-                //    break;
-
                 case TarMode.Read:
-                    if (!stream.CanRead)
-                    {
-                        throw new ArgumentException("Read");
-                    }
+                    fileMode = FileMode.Open;
+                    _mmfAccess = MemoryMappedFileAccess.Read;
                     break;
-
-                //case TarMode.Update:
-                //    if (!stream.CanRead || !stream.CanWrite || !stream.CanSeek)
-                //    {
-                //        throw new ArgumentException("Update");
-                //    }
-                //    break;
 
                 default:
                     throw new ArgumentOutOfRangeException("Mode");
             }
 
-            //if (_options.Mode != TarMode.Create)
-            //{
-            _archiveReader = new BinaryReader(_archiveStream);
-            //}
-
+            _mmf = MemoryMappedFile.CreateFromFile(path, fileMode, null, 0, _mmfAccess);
             _entries = new List<TarArchiveEntry>();
             _entriesCollection = new ReadOnlyCollection<TarArchiveEntry>(_entries);
             _isDisposed = false;
@@ -94,11 +65,6 @@ namespace tarimpl
         {
             get
             {
-                //if (_options.Mode == TarMode.Create)
-                //{
-                //    throw new NotSupportedException("Entries Create");
-                //}
-
                 ThrowIfDisposed();
                 EnsureArchiveIsRead();
 
@@ -110,16 +76,28 @@ namespace tarimpl
 
         public TarArchiveEntry CreateEntry(string entryName) => throw null!;
 
-        public void Dispose()
-        {
-        }
+        internal MemoryMappedFile MemoryFile => _mmf;
+
+        internal MemoryMappedFileAccess MemoryFileAccess => _mmfAccess;
+
+        public void Dispose() => Dispose(true);
 
         protected virtual void Dispose(bool disposing)
         {
+            if (disposing)
+            {
+                foreach (var entry in _entries)
+                {
+                    entry.Stream?.Dispose();
+                }
+                _mmf.Dispose();
+                GC.SuppressFinalize(this);
+            }
         }
 
         public TarArchiveEntry? GetEntry(string entryName)
         {
+            EnsureArchiveIsRead();
             return null;
         }
 
@@ -148,12 +126,17 @@ namespace tarimpl
 
         private void ReadArchive()
         {
-            Debug.Assert(_archiveReader != null);
-            _archiveStream.Seek(0, SeekOrigin.Begin);
-            while (TarFileHeader.TryReadBlock(_archiveReader, out TarFileHeader currentHeader))
+            long startHeader = 0;
+            long endHeader = startHeader + TarFileHeader.TarFileHeaderSize;
+            using var stream = _mmf.CreateViewStream(startHeader, endHeader, _mmfAccess);
+            var reader = new BinaryReader(stream);
+            while (TarFileHeader.TryReadBlock(ref reader, out TarFileHeader currentHeader))
             {
-                AddEntry(new TarArchiveEntry(this, currentHeader));
+                var entry = new TarArchiveEntry(this, currentHeader, endHeader + 1);
+                AddEntry(entry);
+                startHeader += TarFileHeader.TarFileHeaderSize + entry.Length + 1; // Move past content of entry file
             }
+            reader.Dispose();
         }
     }
 }

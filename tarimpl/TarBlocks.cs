@@ -1,12 +1,16 @@
 // Wiki: https://en.wikipedia.org/wiki/Tar_(computing)https://man.netbsd.org/tar.5
 // All Specs: https://man.netbsd.org/tar.5
 
+using System;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 
 namespace tarimpl
 {
     internal struct TarFileHeader
     {
+        internal const short TarFileHeaderSize = 512;
+
         internal struct TypeFlags
         {
             internal const char OldNormal = '\0';   // LF_OLDNORMAL - Normal disk file, Unix compatible
@@ -42,18 +46,20 @@ namespace tarimpl
 
         internal struct FieldSizes
         {
-            internal const ushort NameSize = 100;   // NAMSIZ
-            internal const ushort Mode = 8;
-            internal const ushort Uid = 8;
-            internal const ushort Gid = 8;
-            internal const ushort Size = 12;
-            internal const ushort MTime = 12;
-            internal const ushort CheckSum = 8;
-            internal const ushort LinkName = NameSize;
+            private const ushort PathLength = 100;
+
+            internal const ushort Name = PathLength;
+            internal const ushort Mode = 7; // excludes null
+            internal const ushort Uid = 7; // excludes null
+            internal const ushort Gid = 7; // excludes null
+            internal const ushort Size = 11; // excludes space
+            internal const ushort MTime = 11; // excludes space
+            internal const ushort CheckSum = 6; // excludes null and space
+            internal const ushort LinkName = PathLength;
             internal const ushort Magic = 6;
-            internal const ushort Version = 2;
-            internal const ushort UName = 32; // TUNMLEN
-            internal const ushort GName = 32; // TGNMLEN
+            internal const ushort Version = 2; // two nulls or a space and a null
+            internal const ushort UName = 32;
+            internal const ushort GName = 32;
             internal const ushort DevMajor = 8;
             internal const ushort DevMinor = 8;
             internal const ushort Prefix = 155;
@@ -65,32 +71,33 @@ namespace tarimpl
         // Old tar implementations filled unused leading bytes in numeric fields with spaces.
         // Modern tar implementations fill unused leading bytes in numberi fields with zeros (best portability).
 
-        internal byte[] _name; // null terminated
-        internal byte[] _mode; // ends in space and a null byte
-        internal byte[] _uid; // ends in space and a null byte
+        internal byte[] _name;
+        internal byte[] _mode;
+        internal byte[] _uid;
         internal byte[] _gid; //  ends in space and a null byte
 
         // For regular files, size indicates the amount of data following the header;
         //  for directories, size may indicate the total size of all files in the directory, so
         //  operating systems that preallocate directory space can use it;
         //  for all other types, it should be zero and ignored by readers.
-        internal byte[] _size; // size - ends in space
+        internal byte[] _size;
 
-        internal byte[] _mtime; // ends in space
-        internal byte[] _checksum; // ends in null and a space
+        // last modification timestamp
+        internal byte[] _mtime;
+        internal byte[] _checksum;
 
         // The entry type
         internal byte _typeflag;
-        internal byte[] _linkname; // null terminated
+        internal byte[] _linkname;
 
         // Contains the magic value 'ustar', to indicate it's POSIX standard archive.
         // For full compliance, uname and gname must be properly set.
-        internal byte[] _magic; // null terminated
+        internal byte[] _magic;
 
-        internal byte[] _version; // Two nulls
+        internal byte[] _version;
 
-        internal byte[] _uname; // null terminated
-        internal byte[] _gname; // null terminated
+        internal byte[] _uname;
+        internal byte[] _gname;
 
         // Major number for a character device or block device entry.
         internal byte[] _devmajor;
@@ -105,25 +112,44 @@ namespace tarimpl
 
         internal byte[] _pad;
 
-        internal static bool TryReadBlock(BinaryReader reader, out TarFileHeader header)
+        internal static bool TryReadBlock(ref BinaryReader reader, out TarFileHeader header)
         {
             header = default;
 
-            header._name = reader.ReadBytes(FieldSizes.NameSize);
+            // null terminated
+            header._name = reader.ReadBytes(FieldSizes.Name);
+            // ends in null
             header._mode = reader.ReadBytes(FieldSizes.Mode);
+            byte x = reader.ReadByte();
+            // ends in null
             header._uid = reader.ReadBytes(FieldSizes.Uid);
+            x = reader.ReadByte();
+            // ends in null
             header._gid = reader.ReadBytes(FieldSizes.Gid);
+            x = reader.ReadByte();
+            // ends in space
             header._size = reader.ReadBytes(FieldSizes.Size);
+            x = reader.ReadByte();
+            // ends in space
             header._mtime = reader.ReadBytes(FieldSizes.MTime);
+            x = reader.ReadByte();
+            // ends in null
             header._checksum = reader.ReadBytes(FieldSizes.CheckSum);
+            byte[] y = reader.ReadBytes(2);
             header._typeflag = reader.ReadByte();
+            // null terminated
             header._linkname = reader.ReadBytes(FieldSizes.LinkName);
+            // null terminated
             header._magic = reader.ReadBytes(FieldSizes.Magic);
+            // two nulls
             header._version = reader.ReadBytes(FieldSizes.Version);
+            // null terminated
             header._uname = reader.ReadBytes(FieldSizes.UName);
+            // null terminated
             header._gname = reader.ReadBytes(FieldSizes.GName);
             header._devmajor = reader.ReadBytes(FieldSizes.DevMajor);
             header._devminor = reader.ReadBytes(FieldSizes.DevMinor);
+            // null terminated
             header._prefix = reader.ReadBytes(FieldSizes.Prefix);
             header._pad = reader.ReadBytes(FieldSizes.Pad);
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Text;
 
 namespace tarimpl
@@ -9,10 +10,23 @@ namespace tarimpl
     {
         public static void Main()
         {
-            ReadEntries();
+            CreateArchiveAddEntries();
         }
 
-        private static void ReadEntries()
+        public static void TestZip()
+        {
+            // The dispose saves the file
+            using FileStream fs = File.Create(@"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\test.zip");
+            // The dispose flushes the zip into the stream
+            using ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Create, leaveOpen: false);
+            // The Zip APIs are capable of creating an entry inside folders that had not yet been added as separate entries
+            ZipArchiveEntry entry = zip.CreateEntry("folder/subfolder/file.txt", CompressionLevel.NoCompression);
+            // The dispose flushes the written lines
+            using var writer = new StreamWriter(entry.Open());
+            writer.WriteLine("Hello world");
+        }
+
+        public static void ReadEntries()
         {
             TarOptions options = new() { Mode = TarMode.Read };
             using TarArchive archive = new TarArchive(@"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\brotli.tar", options);
@@ -22,7 +36,7 @@ namespace tarimpl
             }
         }
 
-        private static void CreateArchiveAddEntries()
+        public static void CreateArchiveAddEntries()
         {
             var files = new Dictionary<string, string>()
             {
@@ -31,7 +45,7 @@ namespace tarimpl
                 { "dir/subdir/file3.txt", "CCC" }
             };
 
-            string path = @"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\brotli.tar";
+            string path = @"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\created.tar";
             if (File.Exists(path))
             {
                 File.Delete(path);
@@ -48,7 +62,6 @@ namespace tarimpl
                 }
             }
         }
-
 
         //private static void UpdateByDeletion(TarArchive archive)
         //{

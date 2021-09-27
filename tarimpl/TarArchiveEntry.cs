@@ -35,22 +35,17 @@ namespace tarimpl
 
     public class TarArchiveEntry
     {
-        private TarArchive? _archive;
+        private TarArchive _archive;
         private TarHeader _header;
-        private long _dataStart;
-        internal MemoryMappedViewStream? _stream;
+        internal Stream? _fileContents;
+        internal bool _isDeleted;
 
-        internal TarArchiveEntry(TarArchive archive, TarHeader header, long dataStart)
+        internal TarArchiveEntry(TarArchive archive, TarHeader header, Stream? fileContents)
         {
             _archive = archive;
             _header = header;
-            _dataStart = dataStart;
-
-            // 0 size means directory
-            if (_header._size > 0)
-            {
-                _stream = _archive._mmf.CreateViewStream(dataStart, _header._size);
-            }
+            _fileContents = fileContents;
+            _isDeleted = false;
         }
 
         public string FullName => _header._fullName;
@@ -83,12 +78,53 @@ namespace tarimpl
             _archive.ThrowIfDisposed();
             _archive.RemoveEntry(this);
             _archive = null!;
+            _isDeleted = true;
         }
 
         public Stream? Open()
         {
             ThrowIfInvalidArchive();
-            return _stream;
+            return _fileContents;
+        }
+
+        internal void Write()
+        {
+            using var writer = new StreamWriter(_archive._stream);
+            RawHeader header = _header._rawHeader;
+
+            writer.Write(header._name);
+            writer.Write(header._mode);
+            writer.Write('\0');
+            writer.Write(header._uid);
+            writer.Write('\0');
+            writer.Write(header._gid);
+            writer.Write(' ');
+            writer.Write(header._size);
+            writer.Write(' ');
+            writer.Write(header._checksum);
+            writer.Write("\0\0");
+            writer.Write(header._typeflag);
+            writer.Write(header._linkname);
+            writer.Write('\0');
+            writer.Write(header._magic);
+            writer.Write(header._version);
+            writer.Write(header._uname);
+            writer.Write(header._gname);
+            writer.Write(header._devmajor);
+            writer.Write(header._devminor);
+            writer.Write(header._prefix);
+            writer.Write(header._pad);
+            // Directories may have no data stored
+            if (_fileContents != null)
+            {
+                _fileContents.CopyTo(_archive._stream);
+                // File contents need to be aligned to block sizes of 512 bytes
+                int padding = (int)(_fileContents.Length % 512);
+                if (padding > 0)
+                {
+                    writer.Write(new string('\0', padding));
+                }
+            }
         }
 
         private void ThrowIfInvalidArchive()

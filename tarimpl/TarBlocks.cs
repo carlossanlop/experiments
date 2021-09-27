@@ -7,6 +7,122 @@ using System.Text;
 
 namespace tarimpl
 {
+    internal struct RawHeader
+    {
+        // All the header fields use 8-bit ASCII characters.
+        // Number fields (mode, uid, gid, size, mtime, checksum, linkflag) use octal numbers in ASCII.
+        // Old tar implementations filled unused leading bytes in numeric fields with spaces.
+        // Modern tar implementations fill unused leading bytes in numberi fields with zeros (best portability).
+
+        internal byte[] _name;
+        internal byte[] _mode;
+        internal byte[] _uid;
+        internal byte[] _gid; //  ends in space and a null byte
+
+        // For regular files, size indicates the amount of data following the header;
+        //  for directories, size may indicate the total size of all files in the directory, so
+        //  operating systems that preallocate directory space can use it;
+        //  for all other types, it should be zero and ignored by readers.
+        internal byte[] _size;
+
+        // last modification timestamp
+        internal byte[] _mtime;
+        internal byte[] _checksum;
+
+        // The entry type
+        internal byte _typeflag;
+        internal byte[] _linkname;
+
+        // Contains the magic value 'ustar', to indicate it's POSIX standard archive.
+        // For full compliance, uname and gname must be properly set.
+        internal byte[] _magic;
+
+        internal byte[] _version;
+
+        internal byte[] _uname;
+        internal byte[] _gname;
+
+        // Major number for a character device or block device entry.
+        internal byte[] _devmajor;
+        // Minor number for a character device or block device entry.
+        internal byte[] _devminor;
+
+        // First part of the pathname. If pathname is too long to fit in the 100 bytes of 'Name',
+        //  which are provided by the standard format, then it can be split by any  '/' characters,
+        //  with the first portion being stored here.
+        //  So, if 'Prefix' is not empty, to obtain the regular pathname, we append 'Prefix' + '/' + 'Name'.
+        internal byte[] _prefix;
+
+        // Space between header and file data.
+        internal byte[] _pad;
+
+        internal static bool TryReadBlock(BinaryReader reader, out RawHeader header)
+        {
+            header = default;
+
+            // null terminated string
+            header._name = reader.ReadBytes(FieldSizes.Name);
+            // ends in null
+            header._mode = reader.ReadBytes(FieldSizes.Mode);
+            reader.ReadByte();
+            // ends in null
+            header._uid = reader.ReadBytes(FieldSizes.Uid);
+            reader.ReadByte();
+            // ends in null
+            header._gid = reader.ReadBytes(FieldSizes.Gid);
+            reader.ReadByte();
+            // ends in space
+            header._size = reader.ReadBytes(FieldSizes.Size);
+            reader.ReadByte();
+            // ends in space
+            header._mtime = reader.ReadBytes(FieldSizes.MTime);
+            reader.ReadByte();
+            // ends in nulls
+            header._checksum = reader.ReadBytes(FieldSizes.CheckSum);
+            reader.ReadBytes(2);
+            header._typeflag = reader.ReadByte();
+            // null terminated string
+            header._linkname = reader.ReadBytes(FieldSizes.LinkName);
+            // null terminated string
+            header._magic = reader.ReadBytes(FieldSizes.Magic);
+            // version contains two nulls
+            header._version = reader.ReadBytes(FieldSizes.Version);
+            // null terminated string
+            header._uname = reader.ReadBytes(FieldSizes.UName);
+            // null terminated string
+            header._gname = reader.ReadBytes(FieldSizes.GName);
+            header._devmajor = reader.ReadBytes(FieldSizes.DevMajor);
+            header._devminor = reader.ReadBytes(FieldSizes.DevMinor);
+            // null terminated string
+            header._prefix = reader.ReadBytes(FieldSizes.Prefix);
+            header._pad = reader.ReadBytes(FieldSizes.Pad);
+
+            return true;
+        }
+
+        private struct FieldSizes
+        {
+            private const ushort PathLength = 100;
+
+            internal const ushort Name = PathLength;
+            internal const ushort Mode = 7; // excludes null
+            internal const ushort Uid = 7; // excludes null
+            internal const ushort Gid = 7; // excludes null
+            internal const ushort Size = 11; // excludes space
+            internal const ushort MTime = 11; // excludes space
+            internal const ushort CheckSum = 6; // excludes null and space
+            internal const ushort LinkName = PathLength;
+            internal const ushort Magic = 6;
+            internal const ushort Version = 2; // two nulls or a space and a null
+            internal const ushort UName = 32;
+            internal const ushort GName = 32;
+            internal const ushort DevMajor = 8;
+            internal const ushort DevMinor = 8;
+            internal const ushort Prefix = 155;
+            internal const ushort Pad = 12;
+        }
+    }
+
     internal struct TarHeader
     {
         internal const short TarFileHeaderSize = 512;
@@ -17,7 +133,7 @@ namespace tarimpl
         internal int _gid;
         internal long _size;
         internal long _mtime;
-        internal int _checksum; // "        internal " is the default value when checksum is computed
+        internal int _checksum;
         internal byte _typeflag;
         internal string _linkname;
         internal string _magic;
@@ -28,32 +144,35 @@ namespace tarimpl
         internal int _devminor;
         internal string _prefix;
 
+        internal long _blockAlignmentPadding;
+
         internal string _fullName;
         internal DateTime _lastWriteTime;
 
-        internal static bool TryReadBlock(BinaryReader reader, out TarHeader header, out long skippedBytes)
+        internal RawHeader _rawHeader;
+
+        internal static bool TryReadBlock(BinaryReader reader, out TarHeader header)
         {
             header = default;
-            skippedBytes = 0;
 
-            if (!RawHeader.TryReadBlock(reader, out RawHeader rawHeader))
+            if (!RawHeader.TryReadBlock(reader, out header._rawHeader))
             {
                 return false;
             }
 
-            header._name = Encoding.ASCII.GetString(rawHeader._name).TrimEnd('\0');
-            header._mode = GetInt32FromOctalString(rawHeader._mode);
-            header._uid = GetInt32FromOctalString(rawHeader._uid);
-            header._gid = GetInt32FromOctalString(rawHeader._gid);
-            header._size = GetInt32FromOctalString(rawHeader._size);
-            header._mtime = GetInt32FromOctalString(rawHeader._mtime);
-            header._checksum = GetInt32FromOctalString(rawHeader._checksum);
-            header._typeflag = rawHeader._typeflag;
-            header._linkname = Encoding.ASCII.GetString(rawHeader._linkname).TrimEnd('\0');
-            header._magic = Encoding.ASCII.GetString(rawHeader._magic);
-            header._version = Encoding.ASCII.GetString(rawHeader._version);
-            header._uname = Encoding.ASCII.GetString(rawHeader._uname).TrimEnd('\0');
-            header._gname = Encoding.ASCII.GetString(rawHeader._gname).TrimEnd('\0');
+            header._name = Encoding.ASCII.GetString(header._rawHeader._name).TrimEnd('\0');
+            header._mode = GetInt32FromOctalString(header._rawHeader._mode);
+            header._uid = GetInt32FromOctalString(header._rawHeader._uid);
+            header._gid = GetInt32FromOctalString(header._rawHeader._gid);
+            header._size = GetInt32FromOctalString(header._rawHeader._size);
+            header._mtime = GetInt32FromOctalString(header._rawHeader._mtime);
+            header._checksum = GetInt32FromOctalString(header._rawHeader._checksum);
+            header._typeflag = header._rawHeader._typeflag;
+            header._linkname = Encoding.ASCII.GetString(header._rawHeader._linkname).TrimEnd('\0');
+            header._magic = Encoding.ASCII.GetString(header._rawHeader._magic);
+            header._version = Encoding.ASCII.GetString(header._rawHeader._version);
+            header._uname = Encoding.ASCII.GetString(header._rawHeader._uname).TrimEnd('\0');
+            header._gname = Encoding.ASCII.GetString(header._rawHeader._gname).TrimEnd('\0');
 
             if (header._magic.Equals("ustar ") &&
                 (string.IsNullOrEmpty(header._uname) ||
@@ -66,10 +185,10 @@ namespace tarimpl
             // DevMajor and DevMinor are only available for block and character files
             if (header._typeflag.Equals('3') || header._typeflag.Equals('4'))
             {
-                header._devmajor = Convert.ToInt32(Encoding.ASCII.GetString(rawHeader._devmajor));
-                header._devminor = Convert.ToInt32(Encoding.ASCII.GetString(rawHeader._devminor));
+                header._devmajor = Convert.ToInt32(Encoding.ASCII.GetString(header._rawHeader._devmajor));
+                header._devminor = Convert.ToInt32(Encoding.ASCII.GetString(header._rawHeader._devminor));
             }
-            header._prefix = Encoding.ASCII.GetString(rawHeader._prefix).TrimEnd('\0');
+            header._prefix = Encoding.ASCII.GetString(header._rawHeader._prefix).TrimEnd('\0');
 
             if (string.IsNullOrEmpty(header._prefix))
             {
@@ -83,7 +202,7 @@ namespace tarimpl
             header._lastWriteTime = DateTime.UnixEpoch.AddSeconds(header._mtime);
 
             // Advance the reader to skip the file data bytes
-            skippedBytes = TarHeader.SkipFileData(reader, header._size);
+            header._blockAlignmentPadding = SkipFileData(reader, header._size);
 
             return true;
         }
@@ -92,9 +211,9 @@ namespace tarimpl
             Convert.ToInt32(Encoding.ASCII.GetString(field), 8);
 
         // Move the BinaryReader pointer to the first byte of the next file header.
+        // Returns the total number of null characters found after the file contents.
         private static long SkipFileData(BinaryReader reader, long total)
         {
-            long skippedBytes = total;
             while (total > 0)
             {
                 if (total > int.MaxValue)
@@ -109,14 +228,16 @@ namespace tarimpl
                 }
             }
 
-            // After the file contents, there may be zero or more null characters
+            // After the file contents, there may be zero or more null characters,
+            //  which exist to ensure the data is aligned to 512 byte blocks.
+            long blockAlignmentPadding = 0;
             while (reader.PeekChar() == 0)
             {
                 reader.ReadByte();
-                skippedBytes++;
+                blockAlignmentPadding++;
             }
 
-            return skippedBytes;
+            return blockAlignmentPadding;
         }
 
         private struct TypeFlags
@@ -153,120 +274,5 @@ namespace tarimpl
             internal const ushort savetext = 0x200; // save text (sticky bit) (octal 1000)
         }
         */
-
-        internal struct RawHeader
-        {
-            // All the header fields use 8-bit ASCII characters.
-            // Number fields (mode, uid, gid, size, mtime, checksum, linkflag) use octal numbers in ASCII.
-            // Old tar implementations filled unused leading bytes in numeric fields with spaces.
-            // Modern tar implementations fill unused leading bytes in numberi fields with zeros (best portability).
-
-            internal byte[] _name;
-            internal byte[] _mode;
-            internal byte[] _uid;
-            internal byte[] _gid; //  ends in space and a null byte
-
-            // For regular files, size indicates the amount of data following the header;
-            //  for directories, size may indicate the total size of all files in the directory, so
-            //  operating systems that preallocate directory space can use it;
-            //  for all other types, it should be zero and ignored by readers.
-            internal byte[] _size;
-
-            // last modification timestamp
-            internal byte[] _mtime;
-            internal byte[] _checksum;
-
-            // The entry type
-            internal byte _typeflag;
-            internal byte[] _linkname;
-
-            // Contains the magic value 'ustar', to indicate it's POSIX standard archive.
-            // For full compliance, uname and gname must be properly set.
-            internal byte[] _magic;
-
-            internal byte[] _version;
-
-            internal byte[] _uname;
-            internal byte[] _gname;
-
-            // Major number for a character device or block device entry.
-            internal byte[] _devmajor;
-            // Minor number for a character device or block device entry.
-            internal byte[] _devminor;
-
-            // First part of the pathname. If pathname is too long to fit in the 100 bytes of 'Name',
-            //  which are provided by the standard format, then it can be split by any  '/' characters,
-            //  with the first portion being stored here.
-            //  So, if 'Prefix' is not empty, to obtain the regular pathname, we append 'Prefix' + '/' + 'Name'.
-            internal byte[] _prefix;
-
-            internal byte[] _pad;
-
-            internal static bool TryReadBlock(BinaryReader reader, out RawHeader header)
-            {
-                header = default;
-
-                // null terminated
-                header._name = reader.ReadBytes(FieldSizes.Name);
-                // ends in null
-                header._mode = reader.ReadBytes(FieldSizes.Mode);
-                byte x = reader.ReadByte();
-                // ends in null
-                header._uid = reader.ReadBytes(FieldSizes.Uid);
-                x = reader.ReadByte();
-                // ends in null
-                header._gid = reader.ReadBytes(FieldSizes.Gid);
-                x = reader.ReadByte();
-                // ends in space
-                header._size = reader.ReadBytes(FieldSizes.Size);
-                x = reader.ReadByte();
-                // ends in space
-                header._mtime = reader.ReadBytes(FieldSizes.MTime);
-                x = reader.ReadByte();
-                // ends in null
-                header._checksum = reader.ReadBytes(FieldSizes.CheckSum);
-                byte[] y = reader.ReadBytes(2);
-                header._typeflag = reader.ReadByte();
-                // null terminated
-                header._linkname = reader.ReadBytes(FieldSizes.LinkName);
-                // null terminated
-                header._magic = reader.ReadBytes(FieldSizes.Magic);
-                // two nulls
-                header._version = reader.ReadBytes(FieldSizes.Version);
-                // null terminated
-                header._uname = reader.ReadBytes(FieldSizes.UName);
-                // null terminated
-                header._gname = reader.ReadBytes(FieldSizes.GName);
-                header._devmajor = reader.ReadBytes(FieldSizes.DevMajor);
-                header._devminor = reader.ReadBytes(FieldSizes.DevMinor);
-                // null terminated
-                header._prefix = reader.ReadBytes(FieldSizes.Prefix);
-                header._pad = reader.ReadBytes(FieldSizes.Pad);
-
-                return true;
-            }
-
-            private struct FieldSizes
-            {
-                private const ushort PathLength = 100;
-
-                internal const ushort Name = PathLength;
-                internal const ushort Mode = 7; // excludes null
-                internal const ushort Uid = 7; // excludes null
-                internal const ushort Gid = 7; // excludes null
-                internal const ushort Size = 11; // excludes space
-                internal const ushort MTime = 11; // excludes space
-                internal const ushort CheckSum = 6; // excludes null and space
-                internal const ushort LinkName = PathLength;
-                internal const ushort Magic = 6;
-                internal const ushort Version = 2; // two nulls or a space and a null
-                internal const ushort UName = 32;
-                internal const ushort GName = 32;
-                internal const ushort DevMajor = 8;
-                internal const ushort DevMinor = 8;
-                internal const ushort Prefix = 155;
-                internal const ushort Pad = 12;
-            }
-        }
     }
 }

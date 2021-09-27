@@ -26,12 +26,11 @@ namespace tarimpl
     public class TarArchive : IDisposable
     {
         private TarOptions _options;
-        internal MemoryMappedFile _mmf;
-        private MemoryMappedViewStream _stream;
         private List<TarArchiveEntry> _entries;
-        private ReadOnlyCollection<TarArchiveEntry> _entriesCollection;
         private bool _isDisposed;
-        private bool _areEntriesRead;
+        private bool _readEntries;
+        private MemoryMappedFile? _mmf;
+        internal Stream _stream;
 
         public TarArchive(string path, TarOptions? options)
         {
@@ -45,24 +44,27 @@ namespace tarimpl
             switch (_options.Mode)
             {
                 case TarMode.Read:
+                    _mmf = MemoryMappedFile.CreateFromFile(path, FileMode.Open);
+                    _stream = _mmf.CreateViewStream();
+                    break;
+
                 case TarMode.Update:
                     _mmf = MemoryMappedFile.CreateFromFile(path, FileMode.Open);
+                    _stream = _mmf.CreateViewStream();
                     break;
 
                 case TarMode.Create:
-                    // TODO: Is the capacity going to preallocate that memory?
-                    _mmf = MemoryMappedFile.CreateNew(path, long.MaxValue, MemoryMappedFileAccess.CopyOnWrite);
+                    _mmf = null;
+                    _stream = new MemoryStream();
                     break;
 
                 default:
                     throw new InvalidOperationException("Mode");
             }
 
-            _stream = _mmf.CreateViewStream();
             _entries = new List<TarArchiveEntry>();
-            _entriesCollection = new ReadOnlyCollection<TarArchiveEntry>(_entries);
             _isDisposed = false;
-            _areEntriesRead = false;
+            _readEntries = false;
         }
 
         public ReadOnlyCollection<TarArchiveEntry> Entries
@@ -71,8 +73,7 @@ namespace tarimpl
             {
                 ThrowIfDisposed();
                 EnsureArchiveIsRead();
-
-                return _entriesCollection;
+                return _entries.AsReadOnly();
             }
         }
 
@@ -84,22 +85,37 @@ namespace tarimpl
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
+            if (disposing && !_isDisposed)
             {
-                foreach (var entry in _entries)
+                try
                 {
-                    entry._stream?.Dispose();
+                    switch (_options.Mode)
+                    {
+                        case TarMode.Read:
+                            break;
+                        case TarMode.Create:
+                        case TarMode.Update:
+                            WriteFiles();
+                            break;
+                        default:
+                            throw new InvalidOperationException("TarOptions.Mode");
+                    }
                 }
-                _stream.Dispose();
+                finally
+                {
+                    CloseStreams();
+                    _isDisposed = true;
+                }
+
                 GC.SuppressFinalize(this);
             }
         }
 
-        public TarArchiveEntry? GetEntry(string entryName)
-        {
-            EnsureArchiveIsRead();
-            return null;
-        }
+        //public TarArchiveEntry? GetEntry(string entryName)
+        //{
+        //    EnsureArchiveIsRead();
+        //    return null;
+        //}
 
         private void AddEntry(TarArchiveEntry entry) => _entries.Add(entry);
 
@@ -115,34 +131,79 @@ namespace tarimpl
             }
         }
 
+        private void CloseStreams()
+        {
+            foreach (var entry in _entries)
+            {
+                entry._fileContents?.Dispose();
+            }
+            _stream.Dispose();
+        }
+
         private void EnsureArchiveIsRead()
         {
-            if (!_areEntriesRead)
+            if (!_readEntries)
             {
-                ReadArchive();
-                _areEntriesRead = true;
+                if (_options.Mode == TarMode.Read || _options.Mode == TarMode.Update)
+                {
+                    ReadArchiveEntries();
+                }
+                _readEntries = true;
             }
         }
 
-        private void ReadArchive()
+        private void ReadArchiveEntries()
         {
+            Debug.Assert(_options.Mode == TarMode.Read || _options.Mode == TarMode.Update);
+
             long startHeader = 0;
             long endHeader = startHeader + TarHeader.TarFileHeaderSize;
             using var reader = new BinaryReader(_stream);
 
             while (startHeader < _stream.Length && endHeader < _stream.Length)
             {
-                if (!TarHeader.TryReadBlock(reader, out TarHeader header, out long skippedBytes))
+                if (!TarHeader.TryReadBlock(reader, out TarHeader header))
                 {
                     break;
                 }
 
                 long dataStart = endHeader + 1;
-                var entry = new TarArchiveEntry(this, header, dataStart);
+
+                // Directories may not have any data inside
+                Stream? contents = null;
+                if (header._size > 0)
+                {
+                    if (_mmf != null)
+                    {
+                        Debug.Assert(_options.Mode == TarMode.Read || _options.Mode == TarMode.Update);
+                        contents = _mmf.CreateViewStream(dataStart, header._size);
+                    }
+                    else
+                    {
+                        contents = new MemoryStream();
+                    }
+                }
+
+                var entry = new TarArchiveEntry(this, header, contents);
                 AddEntry(entry);
-                // skippedBytes contains the entry file size + nulls 
-                startHeader += TarHeader.TarFileHeaderSize + skippedBytes + 1;
+                // skippedBytes contains the entry file size + block alignment padding
+                startHeader += TarHeader.TarFileHeaderSize + header._size + header._blockAlignmentPadding + 1;
                 endHeader = startHeader + TarHeader.TarFileHeaderSize;
+            }
+        }
+
+        private void WriteFiles()
+        {
+            // We shouldn't be here if the tar file was opened in read mode
+            Debug.Assert(_options.Mode != TarMode.Read);
+
+            EnsureArchiveIsRead();
+            _stream.Seek(0, SeekOrigin.Begin);
+            _stream.SetLength(0);
+
+            foreach (TarArchiveEntry entry in _entries)
+            {
+                entry.Write();
             }
         }
     }

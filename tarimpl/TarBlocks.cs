@@ -60,44 +60,50 @@ namespace tarimpl
         {
             header = default;
 
-            // null terminated string
-            header._name = reader.ReadBytes(FieldSizes.Name);
-            // ends in null
-            header._mode = reader.ReadBytes(FieldSizes.Mode);
-            reader.ReadByte();
-            // ends in null
-            header._uid = reader.ReadBytes(FieldSizes.Uid);
-            reader.ReadByte();
-            // ends in null
-            header._gid = reader.ReadBytes(FieldSizes.Gid);
-            reader.ReadByte();
-            // ends in space
-            header._size = reader.ReadBytes(FieldSizes.Size);
-            reader.ReadByte();
-            // ends in space
-            header._mtime = reader.ReadBytes(FieldSizes.MTime);
-            reader.ReadByte();
-            // ends in nulls
-            header._checksum = reader.ReadBytes(FieldSizes.CheckSum);
-            reader.ReadBytes(2);
-            header._typeflag = reader.ReadByte();
-            // null terminated string
-            header._linkname = reader.ReadBytes(FieldSizes.LinkName);
-            // null terminated string
-            header._magic = reader.ReadBytes(FieldSizes.Magic);
-            // version contains two nulls
-            header._version = reader.ReadBytes(FieldSizes.Version);
-            // null terminated string
-            header._uname = reader.ReadBytes(FieldSizes.UName);
-            // null terminated string
-            header._gname = reader.ReadBytes(FieldSizes.GName);
-            header._devmajor = reader.ReadBytes(FieldSizes.DevMajor);
-            header._devminor = reader.ReadBytes(FieldSizes.DevMinor);
-            // null terminated string
-            header._prefix = reader.ReadBytes(FieldSizes.Prefix);
-            header._pad = reader.ReadBytes(FieldSizes.Pad);
+            try
+            {
+                // null terminated string
+                header._name = reader.ReadBytes(FieldSizes.Name);
+                // ends in null
+                header._mode = reader.ReadBytes(FieldSizes.Mode);
+                reader.ReadByte();
+                // ends in null
+                header._uid = reader.ReadBytes(FieldSizes.Uid);
+                reader.ReadByte();
+                // ends in null
+                header._gid = reader.ReadBytes(FieldSizes.Gid);
+                reader.ReadByte();
+                // ends in space
+                header._size = reader.ReadBytes(FieldSizes.Size);
+                reader.ReadByte();
+                // ends in space
+                header._mtime = reader.ReadBytes(FieldSizes.MTime);
+                reader.ReadByte();
+                // ends in nulls
+                header._checksum = reader.ReadBytes(FieldSizes.CheckSum);
+                reader.ReadBytes(2);
+                header._typeflag = reader.ReadByte();
+                // null terminated string
+                header._linkname = reader.ReadBytes(FieldSizes.LinkName);
+                // null terminated string
+                header._magic = reader.ReadBytes(FieldSizes.Magic);
+                // version contains two nulls
+                header._version = reader.ReadBytes(FieldSizes.Version);
+                // null terminated string
+                header._uname = reader.ReadBytes(FieldSizes.UName);
+                // null terminated string
+                header._gname = reader.ReadBytes(FieldSizes.GName);
+                header._devmajor = reader.ReadBytes(FieldSizes.DevMajor);
+                header._devminor = reader.ReadBytes(FieldSizes.DevMinor);
+                // null terminated string
+                header._prefix = reader.ReadBytes(FieldSizes.Prefix);
+                header._pad = reader.ReadBytes(FieldSizes.Pad);
 
-            return true;
+                return true;
+            }
+            catch { }
+
+            return false;
         }
 
         private struct FieldSizes
@@ -151,7 +157,7 @@ namespace tarimpl
 
         internal RawHeader _rawHeader;
 
-        internal static bool TryReadBlock(BinaryReader reader, out TarHeader header)
+        internal static bool TryReadBlock(BinaryReader reader, string? previousLongLink, out TarHeader header)
         {
             header = default;
 
@@ -160,51 +166,61 @@ namespace tarimpl
                 return false;
             }
 
-            header._name = Encoding.ASCII.GetString(header._rawHeader._name).TrimEnd('\0');
-            header._mode = GetInt32FromOctalString(header._rawHeader._mode);
-            header._uid = GetInt32FromOctalString(header._rawHeader._uid);
-            header._gid = GetInt32FromOctalString(header._rawHeader._gid);
-            header._size = GetInt32FromOctalString(header._rawHeader._size);
-            header._mtime = GetInt32FromOctalString(header._rawHeader._mtime);
-            header._checksum = GetInt32FromOctalString(header._rawHeader._checksum);
-            header._typeflag = header._rawHeader._typeflag;
-            header._linkname = Encoding.ASCII.GetString(header._rawHeader._linkname).TrimEnd('\0');
-            header._magic = Encoding.ASCII.GetString(header._rawHeader._magic);
-            header._version = Encoding.ASCII.GetString(header._rawHeader._version);
-            header._uname = Encoding.ASCII.GetString(header._rawHeader._uname).TrimEnd('\0');
-            header._gname = Encoding.ASCII.GetString(header._rawHeader._gname).TrimEnd('\0');
-
-            if (header._magic.Equals("ustar ") &&
-                (string.IsNullOrEmpty(header._uname) ||
-                 string.IsNullOrEmpty(header._gname) ||
-                 (!header._version.Equals(" \0") && !header._version.Equals("\0\0"))))
+            try
             {
-                throw new InvalidDataException("uname or gname empty, or version not 00, when magic is ustar");
+                header._name = Encoding.ASCII.GetString(header._rawHeader._name).TrimEnd('\0');
+                header._mode = GetInt32FromOctalString(header._rawHeader._mode);
+                header._uid = GetInt32FromOctalString(header._rawHeader._uid);
+                header._gid = GetInt32FromOctalString(header._rawHeader._gid);
+                header._size = GetInt32FromOctalString(header._rawHeader._size);
+                header._mtime = GetInt32FromOctalString(header._rawHeader._mtime);
+                header._checksum = GetInt32FromOctalString(header._rawHeader._checksum);
+                header._typeflag = header._rawHeader._typeflag;
+                header._linkname = Encoding.ASCII.GetString(header._rawHeader._linkname).TrimEnd('\0');
+                header._magic = Encoding.ASCII.GetString(header._rawHeader._magic);
+                header._version = Encoding.ASCII.GetString(header._rawHeader._version);
+                header._uname = Encoding.ASCII.GetString(header._rawHeader._uname).TrimEnd('\0');
+                header._gname = Encoding.ASCII.GetString(header._rawHeader._gname).TrimEnd('\0');
+
+                if (header._magic.Equals("ustar ") &&
+                    (string.IsNullOrEmpty(header._uname) ||
+                     string.IsNullOrEmpty(header._gname) ||
+                     (!header._version.Equals(" \0") && !header._version.Equals("\0\0"))))
+                {
+                    throw new InvalidDataException("uname or gname empty, or version not 00, when magic is ustar");
+                }
+
+                // DevMajor and DevMinor are only available for block and character files
+                if (header._typeflag.Equals('3') || header._typeflag.Equals('4'))
+                {
+                    header._devmajor = Convert.ToInt32(Encoding.ASCII.GetString(header._rawHeader._devmajor));
+                    header._devminor = Convert.ToInt32(Encoding.ASCII.GetString(header._rawHeader._devminor));
+                }
+                header._prefix = Encoding.ASCII.GetString(header._rawHeader._prefix).TrimEnd('\0');
+
+                if (!string.IsNullOrEmpty(previousLongLink))
+                {
+                    header._fullName = previousLongLink;
+                }
+                if (string.IsNullOrEmpty(header._prefix))
+                {
+                    header._fullName = header._name;
+                }
+                else
+                {
+                    header._fullName = Path.Join(header._prefix, header._name);
+                }
+
+                header._lastWriteTime = DateTime.UnixEpoch.AddSeconds(header._mtime);
+
+                // Advance the reader to skip the file data bytes
+                header._blockAlignmentPadding = SkipFileData(reader, header._size);
+
+                return true;
             }
+            catch { }
 
-            // DevMajor and DevMinor are only available for block and character files
-            if (header._typeflag.Equals('3') || header._typeflag.Equals('4'))
-            {
-                header._devmajor = Convert.ToInt32(Encoding.ASCII.GetString(header._rawHeader._devmajor));
-                header._devminor = Convert.ToInt32(Encoding.ASCII.GetString(header._rawHeader._devminor));
-            }
-            header._prefix = Encoding.ASCII.GetString(header._rawHeader._prefix).TrimEnd('\0');
-
-            if (string.IsNullOrEmpty(header._prefix))
-            {
-                header._fullName = header._name;
-            }
-            else
-            {
-                header._fullName = Path.Join(header._prefix, header._name);
-            }
-
-            header._lastWriteTime = DateTime.UnixEpoch.AddSeconds(header._mtime);
-
-            // Advance the reader to skip the file data bytes
-            header._blockAlignmentPadding = SkipFileData(reader, header._size);
-
-            return true;
+            return false;
         }
 
         private static int GetInt32FromOctalString(byte[] field) =>
@@ -251,6 +267,14 @@ namespace tarimpl
             internal const char Directory = '5';    // LF_DIR - Directory
             internal const char Fifo = '6';         // LF_FIFO - FIFO special file
             internal const char Contiguous = '7';   // LF_CONTIG - Contiguous file
+
+            internal const char DirEntry = 'D';     // The header is followed by data records listing the names of files in this directory.
+            internal const char LongLink = 'K';     // The data for this entry is a long linkname for the following regular entry.
+            internal const char LongPath = 'L';     // The data for this entry is a long pathname for the following regular entry.
+            internal const char Continuation = 'M'; // This is a continuation of the last file on the previous volume.
+            internal const char ToBeRenamed = 'N';  // Obsolete. The entry contained a list of files to be renamed or symlinked after extraction.
+            internal const char SparseFile = 'S';   // Sparse files are stored as a series of fragments.The header contains a list of fragment offset/length pairs.
+            internal const char VolumeHeader = 'V'; // The name field should be interpreted as a tape/volume header name.This entry should generally be ignored on extraction.
         }
 
         /*

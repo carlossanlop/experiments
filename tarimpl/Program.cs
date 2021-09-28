@@ -8,9 +8,11 @@ namespace tarimpl
 {
     public static class Program
     {
+        private static readonly string _path = @"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\brotli.tar";
+
         public static void Main()
         {
-            CreateArchiveAddEntries();
+            ReadEntries();
         }
 
         public static void TestZip()
@@ -28,40 +30,41 @@ namespace tarimpl
 
         public static void ReadEntries()
         {
+            using FileStream fs = File.Open(_path, FileMode.Open);
             TarOptions options = new() { Mode = TarMode.Read };
-            using TarArchive archive = new TarArchive(@"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\brotli.tar", options);
-            foreach (TarArchiveEntry entry in archive.Entries)
+            using TarArchive archive = new TarArchive(fs, options);
+            while (archive.TryGetNextEntry(out TarArchiveEntry? entry))
             {
-                Console.WriteLine($"{entry.Length}    {entry.FullName}");
+                Console.WriteLine($"{entry.Length, 10} {entry.EntryType, 10} {entry.FullName}");
             }
         }
 
-        public static void CreateArchiveAddEntries()
-        {
-            var files = new Dictionary<string, string>()
-            {
-                { "file1.txt", "AAA" },
-                { "dir/file2.txt", "BBB" },
-                { "dir/subdir/file3.txt", "CCC" }
-            };
+        //public static void CreateArchiveAddEntries()
+        //{
+        //    var files = new Dictionary<string, string>()
+        //    {
+        //        { "file1.txt", "AAA" },
+        //        { "dir/file2.txt", "BBB" },
+        //        { "dir/subdir/file3.txt", "CCC" }
+        //    };
 
-            string path = @"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\created.tar";
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
+        //    string path = @"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\created.tar";
+        //    if (File.Exists(path))
+        //    {
+        //        File.Delete(path);
+        //    }
 
-            var options = new TarOptions() { Mode = TarMode.Create };
-            using (var archive = new TarArchive(path, options))
-            {
-                foreach ((string fileName, string contents) in files)
-                {
-                    TarArchiveEntry entry = archive.CreateEntry(fileName);
-                    using StreamWriter writer = new StreamWriter(entry.Open());
-                    writer.Write(contents);
-                }
-            }
-        }
+        //    var options = new TarOptions() { Mode = TarMode.Create };
+        //    using (var archive = new TarArchive(path, options))
+        //    {
+        //        foreach ((string fileName, string contents) in files)
+        //        {
+        //            TarArchiveEntry entry = archive.CreateEntry(fileName);
+        //            using StreamWriter writer = new StreamWriter(entry.Open());
+        //            writer.Write(contents);
+        //        }
+        //    }
+        //}
 
         //private static void UpdateByDeletion(TarArchive archive)
         //{

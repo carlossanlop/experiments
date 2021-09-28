@@ -35,16 +35,16 @@ namespace tarimpl
 
     public class TarArchiveEntry
     {
-        private TarArchive _archive;
-        private TarHeader _header;
-        internal Stream? _fileContents;
+        private readonly TarArchive _archive;
+        private readonly TarHeader _header;
+        private long _dataStart;
         internal bool _isDeleted;
 
-        internal TarArchiveEntry(TarArchive archive, TarHeader header, Stream? fileContents)
+        internal TarArchiveEntry(TarArchive archive, TarHeader header, long dataStart)
         {
             _archive = archive;
             _header = header;
-            _fileContents = fileContents;
+            _dataStart = dataStart;
             _isDeleted = false;
         }
 
@@ -71,20 +71,11 @@ namespace tarimpl
 
         public void Delete()
         {
-            if (_archive == null)
-            {
-                return;
-            }
-            _archive.ThrowIfDisposed();
-            _archive.RemoveEntry(this);
-            _archive = null!;
-            _isDeleted = true;
         }
 
-        public Stream? Open()
+        public Stream Open()
         {
-            ThrowIfInvalidArchive();
-            return _fileContents;
+            return null!;
         }
 
         internal void Write()
@@ -115,25 +106,16 @@ namespace tarimpl
             writer.Write(header._prefix);
             writer.Write(header._pad);
             // Directories may have no data stored
-            if (_fileContents != null)
-            {
-                _fileContents.CopyTo(_archive._stream);
-                // File contents need to be aligned to block sizes of 512 bytes
-                int padding = (int)(_fileContents.Length % 512);
-                if (padding > 0)
-                {
-                    writer.Write(new string('\0', padding));
-                }
-            }
-        }
-
-        private void ThrowIfInvalidArchive()
-        {
-            if (_archive == null)
-            {
-                throw new InvalidOperationException("entry is deleted");
-            }
-            _archive.ThrowIfDisposed();
+            //if (_fileContents != null)
+            //{
+            //    _fileContents.CopyTo(_archive._stream);
+            //    // File contents need to be aligned to block sizes of 512 bytes
+            //    int padding = (int)(_fileContents.Length % 512);
+            //    if (padding > 0)
+            //    {
+            //        writer.Write(new string('\0', padding));
+            //    }
+            //}
         }
 
         public override string ToString() => FullName;

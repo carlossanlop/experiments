@@ -25,6 +25,7 @@ namespace tarimpl
         internal Stream _stream;
         private TarOptions _options;
         private TarArchiveEntry? _currentEntry;
+        private string? _previousLongLink;
         private long _currentHeaderBegin;
         private long _currentHeaderEnd;
         private BinaryReader _reader;
@@ -35,6 +36,7 @@ namespace tarimpl
         public TarArchive(Stream stream, TarOptions? options)
         {
             _stream = stream;
+            _previousLongLink = null;
             _options = options ?? new TarOptions();
             _currentHeaderBegin = 0;
             _currentHeaderEnd = TarHeader.TarFileHeaderSize;
@@ -57,6 +59,11 @@ namespace tarimpl
                     // skippedBytes contains the entry file size + block alignment padding
                     _currentHeaderBegin += TarHeader.TarFileHeaderSize + header._size + header._blockAlignmentPadding + 1;
                     _currentHeaderEnd = _currentHeaderBegin + TarHeader.TarFileHeaderSize;
+                    if (_currentEntry.EntryType == TarArchiveEntryType.LongLink)
+                    {
+                        using var reader = new StreamReader(_currentEntry.Open());
+                        _previousLongLink = reader.ReadLine();
+                    }
                 }
             }
             else

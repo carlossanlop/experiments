@@ -1,7 +1,9 @@
 using System;
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -37,6 +39,7 @@ namespace tarimpl
     {
         private readonly TarArchive _archive;
         private readonly TarHeader _header;
+        private MemoryStream? _stream;
         private long _dataStart;
         internal bool _isDeleted;
 
@@ -46,6 +49,7 @@ namespace tarimpl
             _header = header;
             _dataStart = dataStart;
             _isDeleted = false;
+            _stream = null;
         }
 
         public string FullName => _header._fullName;
@@ -69,13 +73,36 @@ namespace tarimpl
 
         public int CheckSum => _header._checksum;
 
+        public TarArchiveEntryType EntryType => (TarArchiveEntryType)_header._typeflag;
+
         public void Delete()
         {
         }
 
         public Stream Open()
         {
-            return null!;
+            if (_stream == null)
+            {
+                _stream = new MemoryStream();
+                using Stream tempArchiveStream = _archive._stream;
+                tempArchiveStream.Seek(_dataStart, SeekOrigin.Begin);
+
+                int bufferLength = 100;
+                byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferLength);
+                long totalBytesToRead = _header._size;
+                long bytesReadSoFar = 0;
+                do
+                {
+                    int n = tempArchiveStream.Read(buffer.AsSpan());
+                    _stream.Write(buffer);
+                    bytesReadSoFar += n;
+                    totalBytesToRead -= n;
+                }
+                while (totalBytesToRead > 0);
+                
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+            return _stream;
         }
 
         internal void Write()

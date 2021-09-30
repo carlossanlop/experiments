@@ -8,8 +8,7 @@ namespace tarimpl
 {
     public static class Program
     {
-        private static readonly string _path = @"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\brotli.tar";
-
+        private static string _oneDrive = Environment.GetEnvironmentVariable("OneDrive")!;
         public static void Main()
         {
             ReadEntries();
@@ -18,7 +17,8 @@ namespace tarimpl
         public static void TestZip()
         {
             // The dispose saves the file
-            using FileStream fs = File.Create(@"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\test.zip");
+            string path = Path.Join(_oneDrive, "Desktop", "Compression", "test.zip");
+            using FileStream fs = File.Create(path);
             // The dispose flushes the zip into the stream
             using ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Create, leaveOpen: false);
             // The Zip APIs are capable of creating an entry inside folders that had not yet been added as separate entries
@@ -30,9 +30,10 @@ namespace tarimpl
 
         public static void ReadEntries()
         {
+            string _path = Path.Join(_oneDrive, "Desktop", "Compression", "brotli.tar");
             using FileStream fs = File.Open(_path, FileMode.Open);
             TarOptions options = new() { Mode = TarMode.Read };
-            using TarArchive archive = new TarArchive(fs, options);
+            using var archive = new TarArchive(fs, options);
             while (archive.TryGetNextEntry(out TarArchiveEntry? entry))
             {
                 Console.WriteLine($"{entry.Length, 10} {entry.EntryType, 10} {entry.FullName}");
@@ -48,7 +49,7 @@ namespace tarimpl
         //        { "dir/subdir/file3.txt", "CCC" }
         //    };
 
-        //    string path = @"C:\Users\calope\OneDrive - Microsoft\Desktop\Compression\created.tar";
+        //    string path = Path.Join(_oneDrive, "Desktop","Compression","created.tar");
         //    if (File.Exists(path))
         //    {
         //        File.Delete(path);

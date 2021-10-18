@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31717.71
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "tarimpl", "tarimpl.csproj", "{2975E775-B95C-4D6C-8D55-BF09E2F0C31E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tarimpl.tests", "..\tarimpl.tests\tarimpl.tests.csproj", "{367669B6-437F-4140-A694-75AD62B25846}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{2975E775-B95C-4D6C-8D55-BF09E2F0C31E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2975E775-B95C-4D6C-8D55-BF09E2F0C31E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2975E775-B95C-4D6C-8D55-BF09E2F0C31E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{367669B6-437F-4140-A694-75AD62B25846}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{367669B6-437F-4140-A694-75AD62B25846}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{367669B6-437F-4140-A694-75AD62B25846}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{367669B6-437F-4140-A694-75AD62B25846}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

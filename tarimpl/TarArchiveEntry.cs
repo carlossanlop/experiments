@@ -39,20 +39,22 @@ namespace tarimpl
     {
         private readonly TarArchive _archive;
         private readonly TarHeader _header;
-        private MemoryStream? _stream;
+        internal MemoryStream? _stream;
         private long _dataStart;
         internal bool _isDeleted;
+        private string? _previousLongLink;
 
-        internal TarArchiveEntry(TarArchive archive, TarHeader header, long dataStart)
+        internal TarArchiveEntry(TarArchive archive, TarHeader header, long dataStart, string? previousLongLink)
         {
             _archive = archive;
             _header = header;
             _dataStart = dataStart;
             _isDeleted = false;
             _stream = null;
+            _previousLongLink = previousLongLink;
         }
 
-        public string FullName => _header._fullName;
+        public string FullName => !string.IsNullOrEmpty(_previousLongLink) ? _previousLongLink : _header._fullName;
 
         public string LinkName => _header._linkname;
 
@@ -84,23 +86,24 @@ namespace tarimpl
             if (_stream == null)
             {
                 _stream = new MemoryStream();
-                using Stream tempArchiveStream = _archive._stream;
-                tempArchiveStream.Seek(_dataStart, SeekOrigin.Begin);
+                long originalPosition = _archive._stream.Position;
+                _archive._stream.Seek(_dataStart, SeekOrigin.Begin);
 
                 int bufferLength = 100;
-                byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferLength);
+                byte[] buffer = new byte[bufferLength];
                 long totalBytesToRead = _header._size;
                 long bytesReadSoFar = 0;
                 do
                 {
-                    int n = tempArchiveStream.Read(buffer.AsSpan());
-                    _stream.Write(buffer);
+                    int bufferLimit = (int)Math.Min(totalBytesToRead, bufferLength);
+                    int n = _archive._stream.Read(buffer, 0, bufferLimit);
+                    _stream.Write(buffer, 0, bufferLimit);
                     bytesReadSoFar += n;
                     totalBytesToRead -= n;
                 }
                 while (totalBytesToRead > 0);
                 
-                ArrayPool<byte>.Shared.Return(buffer);
+                _archive._stream.Position = originalPosition;
             }
             return _stream;
         }

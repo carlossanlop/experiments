@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Text;
 
 namespace tarimpl
 {
@@ -45,34 +46,51 @@ namespace tarimpl
 
         public bool TryGetNextEntry([NotNullWhen(returnValue: true)] out TarArchiveEntry? entry)
         {
+            if (_currentEntry != null)
+            {
+                _currentEntry._stream?.Dispose();
+                _currentEntry = null;
+            }
             if (_currentHeaderBegin < _stream.Length && _currentHeaderEnd < _stream.Length)
             {
                 if (!TarHeader.TryReadBlock(_reader, null, out TarHeader header))
                 {
                     _currentHeaderBegin = _currentHeaderEnd = _stream.Length;
+                    _currentEntry?._stream?.Dispose();
                     _currentEntry = null;
                 }
                 else
                 {
                     long dataStart = _currentHeaderEnd + 1;
-                    _currentEntry = new TarArchiveEntry(this, header, dataStart);
+                    _currentEntry = new TarArchiveEntry(this, header, dataStart, _previousLongLink);
                     // skippedBytes contains the entry file size + block alignment padding
                     _currentHeaderBegin += TarHeader.TarFileHeaderSize + header._size + header._blockAlignmentPadding + 1;
                     _currentHeaderEnd = _currentHeaderBegin + TarHeader.TarFileHeaderSize;
+
                     if (_currentEntry.EntryType == TarArchiveEntryType.LongLink)
                     {
-                        using var reader = new StreamReader(_currentEntry.Open());
-                        _previousLongLink = reader.ReadLine();
+                        using var reader = new BinaryReader(_currentEntry.Open());
+                        _previousLongLink = Encoding.ASCII.GetString(reader.ReadBytes((int)header._size));
+                    }
+                    else
+                    {
+                        _previousLongLink = null;
                     }
                 }
             }
             else
             {
+                _currentEntry?._stream?.Dispose();
                 _currentEntry = null;
             }
 
             entry = _currentEntry;
             return entry != null;
+        }
+
+        public TarArchiveEntry CreateEntry(ReadOnlySpan<char> path)
+        {
+            return null!;
         }
 
         protected virtual void Dispose(bool disposing)
@@ -83,6 +101,7 @@ namespace tarimpl
                 {
                     _reader.Dispose();
                     _stream.Dispose();
+                    _currentEntry?._stream?.Dispose();
                     _currentEntry = null;
                 }
 
